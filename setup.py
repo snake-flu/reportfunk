@@ -9,10 +9,15 @@ from reportfunk import __version__, _program
 setup(name='reportfunk',
       version=__version__,
       packages=find_packages(),
-      scripts=["reportfunk/funks/funkIO.py",
-            "reportfunk/funks/funkR.py",
+      scripts=["reportfunk/funks/baltic.py",
             "reportfunk/funks/custom_logger.py",
-            "reportfunk/funks/funkT.py"],
+            "reportfunk/funks/time_functions.py",
+            "reportfunk/funks/prep_data_functions.py",
+            "reportfunk/funks/report_functions.py",
+            "reportfunk/funks/parsing_functions.py",
+            "reportfunk/funks/io_functions.py",
+            "reportfunk/funks/class_definitions.py",
+            "reportfunk/funks/tree_functions.py"],
       install_requires=[
             "biopython>=1.70",
             "matplotlib>=3.2.1"

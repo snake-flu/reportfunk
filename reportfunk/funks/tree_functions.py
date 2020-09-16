@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import os
 from matplotlib import font_manager as fm, rcParams
-import baltic as bt
+
 import re
 import copy
-
+import reportfunk.funks.baltic as bt
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib import cm
