@@ -2,7 +2,6 @@
 import os
 from matplotlib import font_manager as fm, rcParams
 import baltic as bt
-
 import re
 import copy
 
