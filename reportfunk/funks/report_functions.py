@@ -13,7 +13,7 @@ def make_title(config):
             title = "## " + title
 
     else:
-        if config["sequencing_centre_text"] == "DEFAULT":
+        if config["sequencing_centre"] == "DEFAULT":
             title = " ## Cluster investigation "
         else:
             seq_centre = config["sequencing_centre_file"].split(".")[0]
