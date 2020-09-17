@@ -49,7 +49,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
 
     tree_to_tip = defaultdict(list)
 
-    contract_dict = {"SCT":"Scotland", "WLS": "Wales", "ENG":"England", "NIR": "Northern_Ireland"}
+    uk_contract_dict = {"SCT":"Scotland", "WLS": "Wales", "ENG":"England", "NIR": "Northern_Ireland"}
 
     with open(metadata_file, "r") as f:
         reader = csv.DictReader(f)
@@ -58,8 +58,11 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             glob_lin = sequence['lineage']
             uk_lineage = sequence['uk_lineage']
             
-            adm1_prep = sequence["adm1"].split("-")[1]
-            adm1 = contract_dict[adm1_prep]
+            if "UK" in sequence["adm1"]:
+                adm1_prep = sequence["adm1"].split("-")[1]
+                adm1 = uk_contract_dict[adm1_prep]
+            else:
+                adm1 = sequence["adm1"]
 
             query_id = sequence['query_id']
             query_name = sequence['query']
@@ -87,7 +90,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
                 new_taxon.closest = closest_name
                 new_taxon.closest_distance = closest_distance
                 new_taxon.snps = snps
-                for k,v in contract_dict.items():
+                for k,v in uk_contract_dict.items():
                     if k in query_name or v in query_name: #if any part of any country name is in the query name it will pick it up assign it
                         new_taxon.attribute_dict["adm1"] = v
                 
@@ -161,7 +164,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_f
                             taxon.attribute_dict["adm1"] = adm1
 
                         if col == "adm2":
-                            tax.attribute_dict["adm2"] = adm2
+                            tax.attribute_dict["adm2"] = sequence["adm2"]
                             if "adm1" not in col_names:
                                 if sequence[col] in adm2_adm1_dict.keys():
                                     adm1 = adm2_adm1_dict[sequence[col]]
