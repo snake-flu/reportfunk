@@ -458,58 +458,64 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     print(green(f"Colouring by: " + f"{graphic_dict_output}"))
     config["graphic_dict"] = graphic_dict_output
 
-def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,query,config):
-        map_settings = False
-
-        if map_sequences:
-            map_settings = True
-            
-        elif "map_sequences" in config:
-            map_settings = config["map_sequences"]
+def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config):
         
-        if map_settings:
-            if not map_inputs:
-                sys.stderr.write(cyan('Error: coordinates or outer postcode not supplied for mapping sequences. Please provide either x and y columns as a comma separated string, or column header containing outer postcode.'))
-                sys.exit(-1)
-            else:
-                
-                if len(map_inputs.split(",")) == 2: #If x and y coordinates are provided
-                    if not input_crs:
-                        sys.stderr.write('Error: input coordinate system not provided for mapping. Please provide --input-crs eg EPSG:3395')
-                        sys.exit(-1)
-                    else:
-                        crs = input_crs
-                else: #If an outer postcode column is provided        
-                    crs = "EPSG:4326"
-                                
-                config["map_cols"] = map_inputs
-                config["input_crs"] = crs
+    map_settings = False
+    query_file = config["query"]
 
-            with open(query, newline="") as f:
-                reader = csv.DictReader(f)
-                column_names = reader.fieldnames
-                relevant_cols = []
-                map_inputs_lst = map_inputs.split(",")
-                for i in map_inputs_lst:
-                    relevant_cols.append(i)
-                relevant_cols.append(mapping_trait)
-                
-                for map_arg in relevant_cols:
-
-                    if map_arg not in column_names:
-                        sys.stderr.write(cyan(f"Error: {map_arg} field not found in metadata file"))
-                        sys.exit(-1)
-
-            if mapping_trait:
-                config["mapping_trait"] = mapping_trait
-            else:
-                config["mapping_trait"] = False
-                
+    if map_sequences:
+        map_settings = True
+        
+    elif "map_sequences" in config:
+        map_settings = config["map_sequences"]
+    
+    if map_settings:
+        if "map_cols" in config:
+            map_inputs = config["map_cols"]
+        
+        if not map_inputs:
+            sys.stderr.write(cyan('Error: coordinates or outer postcode not supplied for mapping sequences. Please provide either x and y columns as a comma separated string, or column header containing outer postcode.'))
+            sys.exit(-1)
         else:
-            config["map_sequences"] = False
-            config["map_cols"] = False
-            config["input_crs"] = False
+            
+            if len(map_inputs.split(",")) == 2: #If x and y coordinates are provided
+                if not input_crs:
+                    sys.stderr.write('Error: input coordinate system not provided for mapping. Please provide --input-crs eg EPSG:3395')
+                    sys.exit(-1)
+                else:
+                    crs = input_crs
+            else: #If an outer postcode column is provided        
+                crs = "EPSG:4326"
+                            
+            config["map_cols"] = map_inputs
+            config["input_crs"] = crs
+
+        with open(query_file, newline="") as f:
+            reader = csv.DictReader(f)
+            column_names = reader.fieldnames
+            relevant_cols = []
+            map_inputs_lst = map_inputs.split(",")
+            for i in map_inputs_lst:
+                relevant_cols.append(i)
+            
+            if mapping_trait:
+                relevant_cols.append(mapping_trait)
+            
+            for map_arg in relevant_cols:
+                if map_arg not in column_names:
+                    sys.stderr.write(cyan(f"Error: {map_arg} field not found in metadata file"))
+                    sys.exit(-1)
+
+        if mapping_trait:
+            config["mapping_trait"] = mapping_trait
+        else:
             config["mapping_trait"] = False
+            
+    else:
+        config["map_sequences"] = False
+        config["map_cols"] = False
+        config["input_crs"] = False
+        config["mapping_trait"] = False
 
 def local_lineages_config(local_lineages, query, config):
 
@@ -801,16 +807,19 @@ def get_sequencing_centre_header(sequencing_centre_arg,config):
         sys.stderr.write(cyan(f'Error: sequencing centre must be one of the following:\n{sc_string}\n'))
         sys.exit(-1)
 
-def distance_config(distance, up_distance, down_distance, config):
-    if distance:
-        config["up_distance"] = distance
-        config["down_distance"] = distance
+def distance_config(config):
+    # if distance:
+    #     config["up_distance"] = distance
+    #     config["down_distance"] = distance
 
-    if up_distance:
-        config["up_distance"] = up_distance
+    # if up_distance:
+    #     config["up_distance"] = up_distance
 
-    if down_distance:
-        config["down_distance"] = down_distance
+    # if down_distance:
+    #     config["down_distance"] = down_distance
+
+    down_distance = config["down_distance"]
+    up_distance = config["up_distance"]
 
     print(green(f"Extraction radius:\n")+f"\tUp distance: {up_distance}\n\tDown distance: {down_distance}\n")
 
