@@ -745,30 +745,26 @@ def get_sequencing_centre_header(sequencing_centre_arg,config):
     
     sc_list = ["PHEC", 'LIVE', 'BIRM', 'PHWC', 'CAMB', 'NORW', 'GLAS', 'EDIN', 'SHEF',
                 'EXET', 'NOTT', 'PORT', 'OXON', 'NORT', 'NIRE', 'GSTT', 'LOND', 'SANG',"NIRE"]
-    if "sequencing_centre" in config:
-        sequencing_centre = config["sequencing_centre"]
-    elif sequencing_centre_arg:
-        sequencing_centre = sequencing_centre_arg
-    else:
-        sequencing_centre = ""
 
-    if sequencing_centre:
-        if sequencing_centre in sc_list:
-            relative_file = os.path.join("data","headers",f"{sequencing_centre}.png")
-            header = pkg_resources.resource_filename('civet', relative_file)
-            print(green(f"Using header file from:") + f" {header}\n")
-            config["sequencing_centre"] = header
-            config["sequencing_centre_text"] = sequencing_centre
-        else:
-            sc_string = "\n".join(sc_list)
-            sys.stderr.write(cyan(f'Error: sequencing centre must be one of the following:\n{sc_string}\n'))
-            sys.exit(-1)
+    if sequencing_centre_arg:
+        sequencing_centre = sequencing_centre_arg
+    elif "sequencing_centre" in config:
+        sequencing_centre = config["sequencing_centre"]
     else:
-        relative_file = os.path.join("data","headers","DEFAULT.png")
-        header = pkg_resources.resource_filename('civet', relative_file)
-        print(green(f"Using header file from:") + f" {header}\n")
-        config["sequencing_centre"] = header
-        config["sequencing_centre_text"] = "DEFAULT"
+        sequencing_centre = "DEFAULT"
+
+    if sequencing_centre in sc_list or sequencing_centre == "DEFAULT":
+        package_png = os.path.join("data","headers",f"{sequencing_centre}.png")
+        sequencing_centre_source = pkg_resources.resource_filename('civet', package_png)
+        print(green(f"Using header file from:") + f" {package_png}\n")
+        config["sequencing_centre_source"] = sequencing_centre_source
+        config["sequencing_centre_dest"] = os.path.join(config["outdir"],"figures",f"{sequencing_centre}.png")
+        config["sequencing_centre_file"] = os.path.join(".","figures",f"{sequencing_centre}.png")
+        config["sequencing_centre"] = sequencing_centre
+    else:
+        sc_string = "\n".join(sc_list)
+        sys.stderr.write(cyan(f'Error: sequencing centre must be one of the following:\n{sc_string}\n'))
+        sys.exit(-1)
 
 def distance_config(distance, up_distance, down_distance, config):
     if distance:
