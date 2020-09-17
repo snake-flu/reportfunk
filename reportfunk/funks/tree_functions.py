@@ -548,16 +548,20 @@ def summarise_node_table(tree_dir, focal_tree, full_tax_dict):
     return df_dict
 
 def make_legend(colour_dict_dict):
+    
     num_colours = []
     num_traits = 0
+    
     for trait, colour_dict in colour_dict_dict.items():
         num_colours.append(len(colour_dict))
         num_traits +=1 
-    y = 0
-    x = 0
+    
+        y = 0
+        x = 0
+        
     max_colours = sorted(num_colours, reverse=True)[0]
     height = math.sqrt(num_traits)*0.75
-    fig,ax = plt.subplots(figsize=(len(colour_dict)+1,height), dpi=700)
+    fig,ax = plt.subplots(figsize=(max_colours+1,height), dpi=700)
     
     for trait, colour_dict in colour_dict_dict.items():
         y +=2
@@ -594,11 +598,11 @@ def make_legend(colour_dict_dict):
     plt.tight_layout()
     plt.show()
 
-def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir):
+def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir, node_summary): #this is describe each collapsed node in turn
 
     tree_lst = sort_trees_index(tree_dir)
 
-    hidden_countries = defaultdict(list)
+    hidden_options = defaultdict(list)
 
     figure_count = 0
 
@@ -619,38 +623,39 @@ def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir):
                 new_name = "Collapsed node" + node_number
                 collapsed_dict[new_name] = seqs
     
-            ndes_country_counts = defaultdict(dict)
+            ndes_option_counts = defaultdict(dict)
             nodes = []
 
             for nde, seqs in collapsed_dict.items():
-                countries = []
+                options = []
                 for i in seqs:
                     if i in full_tax_dict.keys():
                         obj = full_tax_dict[i]
-                        countries.append(obj.attribute_dict["country"])
+                        options.append(obj.node_summary)
 
                     else:
                         pass
 
-                country_counts = Counter(countries)
+                option_counts = Counter(options)
 
                                 
-                if len(country_counts) > 10:
-                    keep_countries = dict(country_counts.most_common(10))
-                    if "UK" in countries and "UK" not in keep_countries.keys():
-                        keep_countries["UK"] = country_counts["UK"]
+                if len(option_counts) > 10:
+                    keep_options = dict(option_counts.most_common(10))
+                    if node_summary == "country":
+                        if "UK" in options and "UK" not in keep_options.keys():
+                            keep_options["UK"] = option_counts["UK"]
 
-                    hidden_countries[focal_tree].append(nde)
+                    hidden_options[focal_tree].append(nde)
                     
                 else:
-                    keep_countries = country_counts
+                    keep_options = option_counts
                     
-                if len(country_counts) > 1:
+                if len(option_counts) > 1:
                     
-                    ndes_country_counts[nde] = keep_countries
+                    ndes_option_counts[nde] = keep_options
                     nodes.append(nde)
                             
-            if len(ndes_country_counts) > 1:
+            if len(ndes_option_counts) > 1:
                 
                 figure_count += 1
 
@@ -658,7 +663,7 @@ def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir):
                 
                 count = 0
 
-                rows = math.ceil(len(ndes_country_counts)/5)
+                rows = math.ceil(len(ndes_option_counts)/5)
                 
                 # fig.tight_layout()
 
@@ -668,7 +673,7 @@ def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir):
 
                     fig.tight_layout()
                     count = 0      
-                    for nde, country_counts in ndes_country_counts.items():
+                    for nde, country_counts in ndes_option_counts.items():
 
                         x = country_counts.keys()
                         y = country_counts.values()
@@ -696,8 +701,8 @@ def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir):
                             try:
                                 relevant_nde = nodes[(nrow*5) + i]
                                 
-                                x = ndes_country_counts[relevant_nde].keys()
-                                y = ndes_country_counts[relevant_nde].values()
+                                x = ndes_option_counts[relevant_nde].keys()
+                                y = ndes_option_counts[relevant_nde].values()
 
                                 axs[nrow][i].bar(x,y, color="goldenrod")
                                 axs[nrow][i].set_title(relevant_nde, size=8)
@@ -711,20 +716,20 @@ def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir):
                
                     fig.suptitle(pretty_focal,y=0.95,x=0.1, size=10)
 
-                if len(ndes_country_counts) != rows*5:
-                    number_empty_ones = rows*5 - len(ndes_country_counts)
+                if len(ndes_option_counts) != rows*5:
+                    number_empty_ones = rows*5 - len(ndes_option_counts)
                     for_removal = [i for i in range((rows*5-number_empty_ones),rows*5)]
 
                     for j in for_removal:
                          fig.delaxes(axs.flatten()[j])
 
                     
-            elif len(ndes_country_counts) == 1:
+            elif len(ndes_option_counts) == 1:
                 
                 figure_count += 1
                 fig, ax = plt.subplots(figsize=(2,2), dpi=250)
 
-                for nde, country_counts in ndes_country_counts.items():
+                for nde, country_counts in ndes_option_counts.items():
                     
                     x = country_counts.keys()
                     y = country_counts.values()
@@ -740,7 +745,7 @@ def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir):
 
     return figure_count
 
-def describe_traits(full_tax_dict, node_summary, query_dict):
+def describe_traits(full_tax_dict, node_summary, query_dict): #describe the whole tree in one chart
 ##more used in llama than civet
 
     trait_prep = defaultdict(list)

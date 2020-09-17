@@ -61,7 +61,7 @@ def check_query_file(query, ids_arg, cwd, config):
         queryfile = os.path.join(config["path_to_query"],config["query"])
 
     elif ids_arg:
-        id_list = query_arg.split(",")
+        id_list = ids_arg.split(",")
         queryfile = make_csv_from_ids(id_list, config)
 
     elif "ids" in config:
@@ -397,17 +397,22 @@ def node_summary(node_summary,config):
         reader = csv.DictReader(f)
         column_names = reader.fieldnames
 
-        if not node_summary:
-            summary = "country"
+    if not node_summary and "node_summary" not in config:
+        summary = "country"
+    else:
+        if "node_summary" in config:
+            option = config["node_summary"]
         else:
-            if node_summary in column_names:
-                summary = node_summary
-            else:
-                sys.stderr.write(cyan(f"Error: {node_summary} field not found in metadata file\n"))
-                sys.exit(-1)
+            option = node_summary
         
-        print(green(f"Summarise collapsed nodes by:") + f" {summary}")
-        config["node_summary"] = summary
+        if option in column_names:
+            summary = option
+        else:
+            sys.stderr.write(cyan(f"Error: {option} field not found in metadata file\n"))
+            sys.exit(-1)
+    
+    print(green(f"Summarise collapsed nodes by:") + f" {summary}")
+    config["node_summary"] = summary
 
 def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, config):
     
@@ -452,8 +457,6 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", "adm1", "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: " + f"{graphic_dict_output}"))
     config["graphic_dict"] = graphic_dict_output
-
-    print(config)
 
 def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,query,config):
         map_settings = False
