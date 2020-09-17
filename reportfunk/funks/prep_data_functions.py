@@ -13,12 +13,17 @@ def prepping_arguments(name_stem_input, tree_fields_input, graphic_dict_input, l
     for i in options: 
         tree_fields.append(i)
 
+    #if type(graphic_dict_input) != dict:
     graphic_dict = {}
     splits = graphic_dict_input.split(",")
     for element in splits:
         key = element.split(":")[0]
         value = element.split(":")[1]
         graphic_dict[key] = value
+    # else:
+    #     graphic_dict = graphic_dict_input
+            
+    for key in graphic_dict.keys():
         if key not in tree_fields:
             tree_fields.append(key)
 

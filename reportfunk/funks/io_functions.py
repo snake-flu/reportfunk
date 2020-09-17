@@ -186,7 +186,7 @@ def local_lineages_to_config(central, neighbouring, region, config):
                     lineage_tables.append(os.path.join(config["outdir"], 'figures', fn))
 
         config["lineage_tables"] = lineage_tables
-        config["lineage_maps"] = [central, neighboring, region]
+        config["lineage_maps"] = [central, neighbouring, region]
     else:
         config["lineage_tables"] = []
         config["lineage_maps"] = []
@@ -333,7 +333,7 @@ def check_args_and_config_list(argument, config_key, default, column_names, conf
             arg_list = config[config_key]
 
         for field in arg_list:
-            if field in column_names  or field in full_metadata_headers:
+            if field in column_names or field in full_metadata_headers:
                 list_of_fields.append(field)
             else:
                 sys.stderr.write(cyan(f"Error: {field} field not found in  query metadata file or background metadata file\n"))
@@ -344,6 +344,53 @@ def check_args_and_config_list(argument, config_key, default, column_names, conf
         
     field_str = ",".join(arg_list)
     return field_str
+
+
+def check_args_and_config_dict(argument, config_key, default_key, default_value,column_names, value_check, config):
+
+    full_metadata_headers = get_full_headers()
+
+    output = []
+
+    if argument: 
+        sections = argument.split(",")
+        for item in sections:
+            splits = item.split("=")
+            key = splits[0]
+            if key in column_names or key in full_metadata_headers:
+                if len(splits) == 1:
+                    output.append(key + ":" + default_value)
+                else:
+                    value = splits[1]
+                    if value in value_check or value == default_value:
+                        output.append(key + ":" + value)
+                    else:
+                        sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
+                        sys.stderr.write(cyan(f"Please use one of {value_check}"))
+                        sys.exit(-1)
+            else:
+                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file\n"))
+                sys.exit(-1)
+
+    elif config_key in config:
+        for key, value in config[config_key].items():
+            if value not in value_check and value != default_value:
+                sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
+                sys.stderr.write(cyan(f"Please use one of {value_check}"))
+                sys.exit(-1)
+            elif key not in column_names and key not in full_metadata_headers:
+                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file\n"))
+                sys.exit(-1)
+            else:
+                output.append(key + ":" + value)        
+
+    else:
+        output.append(default_key + ":" + default_value)
+
+    output = ",".join(output)
+
+    return output
+
 
 def node_summary(node_summary,config):
     with open(config["cog_global_metadata"], newline="") as f:
@@ -362,14 +409,14 @@ def node_summary(node_summary,config):
         print(green(f"Summarise collapsed nodes by:") + f" {summary}")
         config["node_summary"] = summary
 
-def check_label_and_colour_and_date_fields(colour_fields, label_fields, display_arg, date_fields, input_column, config):
+def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, config):
     
     acceptable_colours = get_colours()
     queries = []
     
     labels = []
 
-    graphics_list = []
+    graphics_output = []
     query_file = config["query"]
     input_column = config["input_column"]
     column_names = []
@@ -389,9 +436,9 @@ def check_label_and_colour_and_date_fields(colour_fields, label_fields, display_
             print(f" - {row[input_column]}")
         print(green(f"Number of queries:") + f" {len(queries)}")
 
-    colour_field_str = check_args_and_config_list(colour_fields, "fields", "adm1", column_names, config)
-    print(green(f"Colouring by:") + f" {colour_field_str}")
-    config["tree_fields"] = colour_field_str
+    tree_field_str = check_args_and_config_list(tree_fields, "fields", "adm1", column_names, config)
+    print(green(f"Fields shown on tree:") + f" {tree_field_str}")
+    config["tree_fields"] = tree_field_str
         
     labels_str = check_args_and_config_list(label_fields, "label_fields", "NONE", column_names, config)
 
@@ -401,29 +448,12 @@ def check_label_and_colour_and_date_fields(colour_fields, label_fields, display_
     date_field_str = check_args_and_config_list(date_fields,"date_fields","NONE", column_names,config)
     config["date_fields"] = date_field_str
 
-    if display_arg:
-        sections = display_arg.split(",")
-        for item in sections:
-            splits = item.split("=")
-            graphic_trait = splits[0]
-            if graphic_trait in column_names:
-                if len(splits) == 1:
-                    graphics_list.append(graphic_trait + ":default")
-                else:
-                    colour_scheme = splits[1]
-                    if colour_scheme in acceptable_colours:
-                        graphics_list.append(graphic_trait + ":" + colour_scheme)
-                    else:
-                        sys.stderr.write(cyan(f"Error: {colour_scheme} not a matplotlib compatible colour scheme\n"))
-                        sys.stderr.write(cyan(f"Please use one of {acceptable_colours}"))
-                        sys.exit(-1)
-            else:
-                sys.stderr.write(cyan(f"Error: {graphic_trait} field not found in metadata file\n"))
-                sys.exit(-1)
-    else:
-        graphics_list.append("adm1:default")
+    
+    graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", "adm1", "default",column_names, acceptable_colours, config)
+    print(green(f"Colouring by: " + f"{graphic_dict_output}"))
+    config["graphic_dict"] = graphic_dict_output
 
-    config["graphic_dict"] = ",".join(graphics_list)
+    print(config)
 
 def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,query,config):
         map_settings = False
@@ -505,7 +535,7 @@ def check_summary_fields(full_metadata, summary_field, config):
         column_names = reader.fieldnames
 
         if not summary_field:
-                summary = "lineage"
+            summary = "lineage"
         else:
             if summary_field in column_names:
                 summary = summary_field
@@ -570,11 +600,13 @@ def get_package_data(cog_report,thisdir,config):
     map_input_6 = pkg_resources.resource_filename('civet', 'data/mapping_files/UK_outPC_coords.csv')
     spatial_translations_1 = pkg_resources.resource_filename('civet', 'data/mapping_files/HB_Translation.pkl')
     spatial_translations_2 = pkg_resources.resource_filename('civet', 'data/mapping_files/adm2_regions_to_coords.csv')
+    appendix_text = pkg_resources.resource_filename('civet', 'data/appendix.txt')
     config["reference_fasta"] = reference_fasta
     config["outgroup_fasta"] = outgroup_fasta
     config["polytomy_figure"] = polytomy_figure
     config["report_args"] = report_args
     config["footer"] = footer_fig
+    config["appendix"] = appendix_text
     
     config["clean_locs"] = clean_locs
     config["uk_map"] = map_input_1

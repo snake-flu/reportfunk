@@ -55,6 +55,14 @@ def authors(config):
     else:
         config["authors"] = ""
 
+def appendix(omit_appendix_arg, config):
+
+    if "omit_appendix" in config:
+        value = config["omit_appendix"]
+    else:
+        value = omit_appendix_arg
+
+    config["omit_appendix"] = value    
 
 def free_text_args(config):
     report_date(config)
