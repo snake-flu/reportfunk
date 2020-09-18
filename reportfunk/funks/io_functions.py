@@ -479,11 +479,13 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
         else:
             
             if len(map_inputs.split(",")) == 2: #If x and y coordinates are provided
-                if not input_crs:
+                if input_crs:
+                    crs = input_crs
+                elif "input_crs" in config:
+                    crs = config["input_crs"]
+                else:
                     sys.stderr.write('Error: input coordinate system not provided for mapping. Please provide --input-crs eg EPSG:3395')
                     sys.exit(-1)
-                else:
-                    crs = input_crs
             else: #If an outer postcode column is provided        
                 crs = "EPSG:4326"
                             

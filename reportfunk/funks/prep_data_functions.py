@@ -55,15 +55,15 @@ def analyse_inputs(inputs):
     
     print("Summarising nodes by " + node_summary_option)
 
-    if map_sequences != "False":
+    if map_sequences:
         map_args = map_inputs.split(",")
         if len(map_args) == 2:
-            if mapping_trait != "False":
+            if mapping_trait:
                 print("Mapping sequences using columns " + map_args[0] + " " + map_args[1] + " for x values and y values respectively, and colouring by " + mapping_trait)
             else:
                 print("Mapping sequences using columns " + map_args[0] + " " + map_args[1] + " for x values and y values respectively.")
         else:
-            if mapping_trait != "False":
+            if mapping_trait:
                 print("Mapping sequences using columns " + map_args[0] + " for outer postcodes, and colouring by " + mapping_trait)
             else:
                 print("Mapping sequences using columns " + map_args[0] + " for outer postocdes.")
