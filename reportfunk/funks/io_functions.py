@@ -459,7 +459,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     config["graphic_dict"] = graphic_dict_output
 
 def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config):
-        
+
     map_settings = False
     query_file = config["query"]
 
@@ -472,12 +472,14 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
     if map_settings:
         if "map_cols" in config:
             map_inputs = config["map_cols"]
-        
+
+        if "mapping_trait" in config:
+            mapping_trait = config["mapping_trait"]
+
         if not map_inputs:
             sys.stderr.write(cyan('Error: coordinates or outer postcode not supplied for mapping sequences. Please provide either x and y columns as a comma separated string, or column header containing outer postcode.'))
             sys.exit(-1)
         else:
-            
             if len(map_inputs.split(",")) == 2: #If x and y coordinates are provided
                 if input_crs:
                     crs = input_crs
@@ -509,7 +511,12 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
                     sys.exit(-1)
 
         if mapping_trait:
+            if map_inputs == "adm2":
+                print(cyan(f"NOTE: mapping trait provided, but summary map is not designed for showing trait. Please provide more detailed mapping information, eg outer postcode or coordinates"))
+            else:
+                print(green(f"Colouring map by: " + f"{mapping_trait}"))
             config["mapping_trait"] = mapping_trait
+            
         else:
             config["mapping_trait"] = False
             
