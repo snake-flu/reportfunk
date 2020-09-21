@@ -1,5 +1,5 @@
 
-
+import datetime as dt
 
 def convert_date(date_string):
     bits = date_string.split("-")
@@ -38,9 +38,9 @@ class taxon():
         self.attribute_dict["adm1"] = "NA"
         
         for i in label_fields:
-            self.attribute_dict[i] = "NA"
+            self.attribute_dict[i.replace(" ","")] = "NA"
         for i in tree_fields:
-            self.attribute_dict[i] = "NA"
+            self.attribute_dict[i.replace(" ","")] = "NA"
         
         
         self.tree = "NA"

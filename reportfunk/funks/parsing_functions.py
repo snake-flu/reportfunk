@@ -241,6 +241,11 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, full_metadata, pr
                         if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA": #this means it's not in the input file
                                 tax_object.attribute_dict[field] = sequence[field]
 
+                for field in tree_fields:
+                    if field in col_names:
+                        if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA": #this means it's not in the input file
+                                tax_object.attribute_dict[field] = sequence[field]
+
 
                 full_tax_dict[seq_name] = tax_object
                     
@@ -286,10 +291,7 @@ def make_initial_table(query_dict, tree_fields, label_fields, input_column):
         df_dict["Query ID"].append(query.query_id.replace("|","\|"))
         
         if query.in_cog: 
-            df_dict["Sequence name in Tree"].append(query.name)
-        # else:
-        #     df_dict["Sequence name in Tree"].append("NA")
-        
+            df_dict["Sequence name in Tree"].append(query.name)        
 
         df_dict["Sample date"].append(query.sample_date)
 

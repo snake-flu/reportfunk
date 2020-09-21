@@ -319,10 +319,11 @@ def check_args_and_config_list(argument, config_key, default, column_names, conf
     if argument:
         arg_list = argument.split(",")
         for field in arg_list:
+            field = field.replace(" ","")
             if field in column_names or field in full_metadata_headers:
                 list_of_fields.append(field)
             else:
-                sys.stderr.write(cyan(f"Error: {field} field not found in query metadata file or background metadata file\n"))
+                sys.stderr.write(cyan(f"Error: {field} field not found in query metadata file or background metadata file for {config_key}\n"))
                 sys.exit(-1)
 
     elif config_key in config:
@@ -332,10 +333,11 @@ def check_args_and_config_list(argument, config_key, default, column_names, conf
             arg_list = config[config_key]
 
         for field in arg_list:
-            if field in column_names or field in full_metadata_headers:
-                list_of_fields.append(field)
+            new_field = field.replace(" ","")
+            if new_field in column_names or new_field in full_metadata_headers:
+                list_of_fields.append(new_field)
             else:
-                sys.stderr.write(cyan(f"Error: {field} field not found in  query metadata file or background metadata file\n"))
+                sys.stderr.write(cyan(f"Error: {new_field} field not found in query metadata file or background metadata file for {config_key}\n"))
                 sys.exit(-1)
 
     else:
@@ -355,7 +357,7 @@ def check_args_and_config_dict(argument, config_key, default_key, default_value,
         sections = argument.split(",")
         for item in sections:
             splits = item.split("=")
-            key = splits[0]
+            key = splits[0].replace(" ","")
             if key in column_names or key in full_metadata_headers:
                 if len(splits) == 1:
                     output.append(key + ":" + default_value)
@@ -368,17 +370,18 @@ def check_args_and_config_dict(argument, config_key, default_key, default_value,
                         sys.stderr.write(cyan(f"Please use one of {value_check}"))
                         sys.exit(-1)
             else:
-                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file\n"))
+                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
                 sys.exit(-1)
 
     elif config_key in config:
         for key, value in config[config_key].items():
+            key = key.replace(" ","")
             if value not in value_check and value != default_value:
                 sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
                 sys.stderr.write(cyan(f"Please use one of {value_check}"))
                 sys.exit(-1)
             elif key not in column_names and key not in full_metadata_headers:
-                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file\n"))
+                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
                 sys.exit(-1)
             else:
                 output.append(key + ":" + value)        
@@ -461,6 +464,7 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
 
     map_settings = False
     query_file = config["query"]
+    full_metadata_headers = get_full_headers()
 
     if map_sequences:
         map_settings = True
@@ -470,7 +474,7 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
     
     if map_settings:
         if "map_cols" in config:
-            map_inputs = config["map_cols"]
+            map_inputs = config["map_cols"].replace(" ","")
 
         if "mapping_trait" in config:
             mapping_trait = config["mapping_trait"]
@@ -490,7 +494,7 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
             else: #If an outer postcode column is provided        
                 crs = "EPSG:4326"
                             
-            config["map_cols"] = map_inputs
+            config["map_cols"] = map_inputs.replace(" ","")
             config["input_crs"] = crs
 
         with open(query_file, newline="") as f:
@@ -505,8 +509,9 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
                 relevant_cols.append(mapping_trait)
             
             for map_arg in relevant_cols:
-                if map_arg not in column_names:
-                    sys.stderr.write(cyan(f"Error: {map_arg} field not found in metadata file"))
+                map_arg = map_arg.replace(" ","")
+                if map_arg not in column_names and map_arg not in full_metadata_headers:
+                    sys.stderr.write(cyan(f"Error: {map_arg} field not found in metadata file or background database for mapping sequences"))
                     sys.exit(-1)
 
         if mapping_trait:
@@ -547,12 +552,13 @@ def local_lineages_config(local_lineages, config):
         config["local_lineages"] = False
 
     if config["local_lineages"]:
-        with open(query_file, newline="") as f:
-            reader = csv.DictReader(f)
-            header = reader.fieldnames
-            if not "adm2" in header:
-                sys.stderr.write(cyan(f"Error: --local-lineages argument called, but input csv file doesn't have an adm2 column. Please provide that to have local lineage analysis.\n"))
-                sys.exit(-1)
+        #now made it so that it can take adm2 from the combined metadata 
+        # with open(query_file, newline="") as f:
+        #     reader = csv.DictReader(f)
+        #     header = reader.fieldnames
+        #     if not "adm2" in header:
+        #         sys.stderr.write(cyan(f"Error: --local-lineages argument called, but input csv file doesn't have an adm2 column. Please provide that to have local lineage analysis.\n"))
+        #         sys.exit(-1)
 
         if config["date_restriction"]:
             if config["date_range_start"] and type(config["date_range_start"]) == str:
