@@ -2,8 +2,7 @@
 
 import os
 import argparse
-import csv
-import datetime 
+import csv 
 import sys
 from Bio import SeqIO
 from datetime import datetime 
@@ -526,6 +525,16 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
         config["input_crs"] = False
         config["mapping_trait"] = False
 
+
+def check_date_format(date_string):
+
+    date_format = '%Y-%m-%d'
+    try:
+        date_obj = datetime.strptime(date_string, date_format)
+    except ValueError:
+        sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
+        sys.exit(-1)
+
 def local_lineages_config(local_lineages, config):
 
     query_file = config["query"]
@@ -544,6 +553,20 @@ def local_lineages_config(local_lineages, config):
             if not "adm2" in header:
                 sys.stderr.write(cyan(f"Error: --local-lineages argument called, but input csv file doesn't have an adm2 column. Please provide that to have local lineage analysis.\n"))
                 sys.exit(-1)
+
+        if config["date_restriction"]:
+            if config["date_range_start"] and type(config["date_range_start"]) == str:
+                check_date_format(config["date_range_start"])
+            if config["date_range_end"] and type(config["date_range_end"]) == str:
+                check_date_format(config["date_range_end"])
+
+            if config["date_range_start"] and config["date_range_end"]:
+                print(green(f"Local lineage analysis restricted to {config['date_range_start']} to {config['date_range_end']}"))
+            elif config["date_range_start"]:
+                print(green(f"Local lineage analysis restricted to {config['date_range_start']} to present"))
+            else:
+                print(green(f"Local lineage analysis restricted to {config['date_window']} days around the sampling range"))
+
     else:
         config['local_lineages'] = False
 
