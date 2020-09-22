@@ -45,7 +45,6 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
     
     query_dict = {}
     query_id_dict = {}
-    present_lins = set()
 
     tree_to_tip = defaultdict(list)
 
@@ -78,8 +77,6 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
 
             new_taxon.query_id = query_id
 
-            present_lins.add(uk_lineage)
-
             if query_name == closest_name: #if it's in COG, get it's sample date
                 new_taxon.in_cog = True
                 new_taxon.sample_date = sample_date
@@ -104,7 +101,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             query_dict[query_name] = new_taxon
             query_id_dict[query_id] = new_taxon
             
-    return query_dict, query_id_dict, present_lins, tree_to_tip
+    return query_dict, query_id_dict, tree_to_tip
 
 
 
@@ -164,7 +161,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_f
                             taxon.attribute_dict["adm1"] = adm1
 
                         if col == "adm2":
-                            tax.attribute_dict["adm2"] = sequence["adm2"]
+                            taxon.attribute_dict["adm2"] = sequence["adm2"]
                             if "adm1" not in col_names:
                                 if sequence[col] in adm2_adm1_dict.keys():
                                     adm1 = adm2_adm1_dict[sequence[col]]
@@ -175,7 +172,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_f
       
     return new_query_dict 
 
-def parse_full_metadata(query_dict, label_fields, tree_fields, full_metadata, present_lins, present_in_tree, node_summary_option, tip_to_tree, database_name_column, date_fields=None):
+def parse_full_metadata(query_dict, label_fields, tree_fields, full_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, date_fields=None):
 
     full_tax_dict = query_dict.copy()
 
@@ -200,7 +197,7 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, full_metadata, pr
 
             node_summary_trait = sequence[node_summary_option]
 
-            if (uk_lin in present_lins or seq_name in present_in_tree) and seq_name not in query_dict.keys():
+            if seq_name in present_in_tree and seq_name not in query_dict.keys():
                 new_taxon = taxon(seq_name, glob_lin, uk_lin, phylotype, label_fields, tree_fields)
                 if date == "":
                     date = "NA"
@@ -238,12 +235,12 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, full_metadata, pr
                     
                 for field in label_fields:
                     if field in col_names:
-                        if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA": #this means it's not in the input file
+                        if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
                                 tax_object.attribute_dict[field] = sequence[field]
 
                 for field in tree_fields:
                     if field in col_names:
-                        if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA": #this means it's not in the input file
+                        if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
                                 tax_object.attribute_dict[field] = sequence[field]
 
 
@@ -257,14 +254,14 @@ def parse_all_metadata(treedir, filtered_cog_metadata, full_metadata_file, input
     present_in_tree, tip_to_tree = parse_tree_tips(treedir)
     
     #parse the metadata with just those queries found in cog
-    query_dict, query_id_dict, present_lins, tree_to_tip = parse_filtered_metadata(filtered_cog_metadata, tip_to_tree, label_fields, tree_fields) 
+    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_cog_metadata, tip_to_tree, label_fields, tree_fields) 
 
     if input_csv != '':
          #Any query information they have provided
         query_dict = parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_fields, adm2_to_adm1, date_fields)
     
     #parse the full background metadata
-    full_tax_dict = parse_full_metadata(query_dict, label_fields, tree_fields, full_metadata_file, present_lins, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields)
+    full_tax_dict = parse_full_metadata(query_dict, label_fields, tree_fields, full_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields)
 
     return full_tax_dict, query_dict, tree_to_tip
 

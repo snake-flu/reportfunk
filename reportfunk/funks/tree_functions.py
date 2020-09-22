@@ -51,7 +51,7 @@ def find_tallest_tree(input_dir):
     max_height = sorted(tree_heights, reverse=True)[0]
     return max_height
 
-def display_name(tree, tree_name, tree_dir, full_taxon_dict, query_dict, custom_tip_fields):
+def display_name(tree, tree_name, tree_dir, full_taxon_dict, query_dict, private, custom_tip_fields):
     for k in tree.Objects:
         if k.branchType == 'leaf':
             name = k.name
@@ -67,7 +67,7 @@ def display_name(tree, tree_name, tree_dir, full_taxon_dict, query_dict, custom_
                     date = taxon_obj.sample_date
                     k.traits["display"] = f"{name}|{date}"
                     
-                    if "adm2" in taxon_obj.attribute_dict.keys():
+                    if "adm2" in taxon_obj.attribute_dict.keys() and not private:
                         adm2 = taxon_obj.attribute_dict["adm2"]
                         k.traits["display"] = f"{name}|{adm2}|{date}"
 
@@ -148,9 +148,9 @@ def find_colour_dict(query_dict, trait, colour_scheme):
         return colour_dict
 
     
-def make_scaled_tree(My_Tree, tree_name, tree_dir, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict):
+def make_scaled_tree(My_Tree, tree_name, tree_dir, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, private):
 
-    display_name(My_Tree, tree_name, tree_dir, taxon_dict, query_dict, custom_tip_labels) 
+    display_name(My_Tree, tree_name, tree_dir, taxon_dict, query_dict, private, custom_tip_labels) 
     My_Tree.uncollapseSubtree()
 
     if num_tips < 10:
@@ -335,7 +335,7 @@ def sort_trees_index(tree_dir):
         
     return c
 
-def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, min_uk_taxa=3):
+def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, min_uk_taxa=3):
 
     tallest_height = find_tallest_tree(input_dir)
 
@@ -395,7 +395,7 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
 
                 overall_tree_count += 1      
                 
-                make_scaled_tree(tree, treename, input_dir, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict)     
+                make_scaled_tree(tree, treename, input_dir, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, private)     
             
             else:
                 too_tall_trees.append(lineage)
@@ -477,11 +477,10 @@ def summarise_node_table(tree_dir, focal_tree, full_tax_dict):
             node_number = node_name.lstrip("inserted_node")
             
             member_list = members.split(",")
-
+            
             for tax in member_list:
                 if tax in full_tax_dict.keys():
                     taxon_obj = full_tax_dict[tax]
-                
                     if taxon_obj.sample_date != "NA":
                         date_string = taxon_obj.sample_date
                         date = dt.datetime.strptime(date_string, "%Y-%m-%d").date()
@@ -529,9 +528,12 @@ def summarise_node_table(tree_dir, focal_tree, full_tax_dict):
             else:
                 adm2_string = "NA"
                 
-
-            min_date = str(min(dates))
-            max_date = str(max(dates))
+            if len(dates) != 0:
+                min_date = str(min(dates))
+                max_date = str(max(dates))
+            else:
+                min_date = "no_date"
+                max_date = "no_date"
 
             if "UK" in countries:
                 uk_present = True
