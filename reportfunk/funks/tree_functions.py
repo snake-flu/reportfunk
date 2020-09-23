@@ -486,9 +486,9 @@ def summarise_node_table(tree_dir, focal_tree, full_tax_dict):
                         date = dt.datetime.strptime(date_string, "%Y-%m-%d").date()
                         dates.append(date)
                     
-                    countries.append(taxon_obj.attribute_dict["country"])
+                    countries.append(taxon_obj.country)
 
-                    if taxon_obj.attribute_dict["country"] == "UK":
+                    if taxon_obj.country == "UK":
                         if "adm2" in taxon_obj.attribute_dict.keys():
                             if taxon_obj.attribute_dict["adm2"] != "":
                                 adm2_present.append(taxon_obj.attribute_dict["adm2"])

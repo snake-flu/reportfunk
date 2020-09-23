@@ -17,7 +17,8 @@ setup(name='reportfunk',
             "reportfunk/funks/parsing_functions.py",
             "reportfunk/funks/io_functions.py",
             "reportfunk/funks/class_definitions.py",
-            "reportfunk/funks/tree_functions.py"],
+            "reportfunk/funks/tree_functions.py",
+            "reportfunk/funks/table_functions.py"],
       install_requires=[
             "biopython>=1.70",
             "matplotlib>=3.2.1"

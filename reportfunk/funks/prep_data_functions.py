@@ -1,7 +1,7 @@
 
 import csv
 
-def prepping_arguments(name_stem_input, tree_fields_input, graphic_dict_input, label_fields_input, date_fields_input):
+def prepping_arguments(name_stem_input, tree_fields_input, graphic_dict_input, label_fields_input, date_fields_input, table_fields_input):
 
     if "/" in name_stem_input:
         name_stem = name_stem_input.split("/")[-1]
@@ -39,7 +39,13 @@ def prepping_arguments(name_stem_input, tree_fields_input, graphic_dict_input, l
         for i in options: 
             date_fields.append(i)
 
-    return name_stem, tree_fields, graphic_dict, label_fields, date_fields
+    table_fields = []
+    options = table_fields_input.split(",")
+    for i in options: 
+        table_fields.append(i)
+
+
+    return name_stem, tree_fields, graphic_dict, label_fields, date_fields, table_fields
 
 
 

@@ -341,7 +341,10 @@ def check_args_and_config_list(argument, config_key, default, column_names, conf
                 sys.exit(-1)
 
     else:
-        arg_list.append(default)        
+        if type(default) != list:
+            arg_list.append(default) 
+        else:
+            arg_list.extend(default)       
         
     field_str = ",".join(arg_list)
     return field_str
@@ -457,8 +460,28 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
 
     
     graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", "adm1", "default",column_names, acceptable_colours, config)
-    print(green(f"Colouring by: " + f"{graphic_dict_output}"))
+    print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["graphic_dict"] = graphic_dict_output
+
+def check_table_fields(table_fields, snp_data, config):
+    
+    with open(config["query"], newline="") as f:
+        reader = csv.DictReader(f)
+        column_names = reader.fieldnames
+
+    default_list = ["sample_date", "uk_lineage", "lineage", "phylotype"]
+
+    table_field_str = check_args_and_config_list(table_fields, "table_fields", default_list, column_names, config)
+
+    config["table_fields"] = table_field_str
+    print(green(f"Putting following in table: ") + f" {table_field_str}")
+
+    if snp_data:
+        config["snps_in_seq_table"] = True
+    elif not snp_data and "snps_in_seq_table" not in config:
+        config["snps_in_seq_table"] = False
+    #otherwise it's just specified in the config
+
 
 def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config):
 
