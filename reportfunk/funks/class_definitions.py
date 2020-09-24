@@ -1,5 +1,5 @@
 
-
+import datetime as dt
 
 def convert_date(date_string):
     bits = date_string.split("-")
@@ -8,14 +8,17 @@ def convert_date(date_string):
     return date_dt
 
 class taxon():
-
-    def __init__(self, name, global_lin, uk_lin, phylotype, label_fields, tree_fields):
+    #will need to change the args here to make data parsing general
+    def __init__(self, name, global_lin, uk_lin, phylotype, label_fields, tree_fields, table_fields):
 
         self.name = name
 
         self.sample_date = "NA"
 
         self.date_dict = {}
+        self.table_dict = {}       
+        self.attribute_dict = {}
+        #self.attribute_dict["adm1"] = "NA" this should just be in tree_fields now
         
         if global_lin == "":
             self.global_lin = "NA"
@@ -32,16 +35,14 @@ class taxon():
         else:
             self.phylotype = phylotype
        
-        self.in_cog = False
-        
-        self.attribute_dict = {}
-        self.attribute_dict["adm1"] = "NA"
-        
+        self.in_db = False
+ 
         for i in label_fields:
-            self.attribute_dict[i] = "NA"
+            self.attribute_dict[i.replace(" ","")] = "NA"
         for i in tree_fields:
-            self.attribute_dict[i] = "NA"
-        
+            self.attribute_dict[i.replace(" ","")] = "NA"
+        for i in table_fields:
+            self.table_dict[i.replace(" ","")] = "NA"
         
         self.tree = "NA"
 
