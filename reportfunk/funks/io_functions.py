@@ -30,22 +30,28 @@ def make_config_file(config):
         print(green(f"Config file written to {config_out}."))
         sys.exit()
 
-def type_input_file(query_arg,cwd,config):
+def type_input_file(input_arg,cwd,config):
 
     query,configfile="",""
-    input_file = os.path.join(cwd,query_arg)
-    path_to_file = os.path.abspath(os.path.dirname(input_file))
-    config["path_to_query"] = path_to_file
+    if input_arg:
+        if "," in input_arg:
+            id_list = input_arg.split(",")
+            query = make_csv_from_ids(id_list, config)
+            config["path_to_query"] = config["outdir"]
+        else:
+            input_file = os.path.join(cwd,input_arg)
+            path_to_file = os.path.abspath(os.path.dirname(input_file))
+            config["path_to_query"] = path_to_file
 
-    ending = input_file.split(".")[-1]
+            ending = input_file.split(".")[-1]
 
-    if ending in ["yaml","yml"]:
-        print(green(f"Input config file:") + f" {input_file}")
-        configfile  = input_file
+            if ending in ["yaml","yml"]:
+                print(green(f"Input config file:") + f" {input_file}")
+                configfile  = input_file
 
-    elif ending == "csv":
-        print(green(f"Input file:") + f" {input_file}")
-        query = input_file
+            elif ending == "csv":
+                print(green(f"Input file:") + f" {input_file}")
+                query = input_file
 
     return query,configfile
     
@@ -89,10 +95,10 @@ def make_csv_from_ids(id_list, config):
 def parse_yaml_file(configfile,config):
     with open(configfile,"r") as f:
         input_config = yaml.load(f, Loader=yaml.FullLoader)
-        print(input_config)
         for key in input_config:
             snakecase_key = key.replace("-","_")
-            config[snakecase_key] = input_config[key]
+            if not snakecase_key in config:
+                config[snakecase_key] = input_config[key]
 
     return config
 
@@ -153,7 +159,9 @@ def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     if no_temp_arg:
         print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
         tempdir = outdir
-
+    elif "no-temp" in config:
+        print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
+        tempdir = outdir
     elif tempdir_arg:
         to_be_dir = os.path.join(cwd, tempdir_arg)
         if not os.path.exists(to_be_dir):
@@ -174,6 +182,29 @@ def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     
     config["tempdir"] = tempdir 
     return tempdir
+
+def check_query_file(query, cwd, config):
+    queryfile = ""
+    
+    if query:
+        queryfile = query
+
+    elif "query" in config:
+        queryfile = os.path.join(config["path_to_query"],config["query"])
+
+    elif "ids" in config:
+        queryfile = make_csv_from_ids(config["ids"], config)
+
+    else:
+        sys.stderr.write(cyan(f"Error: no query input provided"))
+        sys.exit(-1)
+
+    print("queryfile is",queryfile)
+    if os.path.exists(queryfile):
+        config["query"] = queryfile
+    else:
+        sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids (e.g. EPI12345,EPI23456), please use in conjunction with the `--id-string` flag or provide `ids` in the config file \n."))
+        sys.exit(-1)
 
 def local_lineages_to_config(central, neighbouring, region, config):
 
@@ -212,103 +243,7 @@ def get_tree_name_stem(tree_dir,config):
 
     config["tree_name_stem"] = tree_name_stem
 
-# def parse_from_metadata_arg(metadata, from_metadata, data_column, config):
-#     queries = []
-#     query_dict = {}
-#     column_names =""
-#     config["input_column"] = data_column
-#     with open(metadata, newline="") as f:
-#         reader = csv.DictReader(f)
-#         column_names = reader.fieldnames
-        
-#         for factor in from_metadata:
-#             column_name,to_search = factor.split("=")
-#             if column_name in column_names:
-#                 query_dict[column_name] = to_search
-#             else:
-#                 cols = "\n- ".join(column_names)
-#                 cols = cols + "\n"
-#                 sys.stderr.write(cyan(f"""Error: `--from-metadata` argument contains a column {column_name} that is not found in the metadata file supplied.
-# Columns that were found:\n{cols}"""))
-#                 sys.exit(-1)
-    
-#     rows_to_search = []
-    
-#     for column_name in query_dict:
-#         to_search = query_dict[column_name]
-#         if ':' in to_search:
-#             if to_search.startswith("2020-") or to_search.startswith("2019-") or to_search.startswith("2021-"):
-#                 print(f"Date range detected: {to_search}")
-#                 date_range = to_search.split(":")
-#                 start_date = datetime.strptime(date_range[0], "%Y-%m-%d").date()
-#                 end_date = datetime.strptime(date_range[1], "%Y-%m-%d").date()
-#                 if rows_to_search == []:
-#                     with open(metadata, newline="") as f:
-#                         reader = csv.DictReader(f)
-#                         c =0
-#                         for row in reader:
-#                             c +=1
-#                             row_date = row[column_name]
-#                             try:
-#                                 check_date = datetime.strptime(row_date, "%Y-%m-%d").date()
-#                             except:
-#                                 sys.stderr.write(cyan(f"Error: Metadata field `{row_date}` [at column: {column_name}, row: {c}] contains unaccepted date format\Please use format `2020-05-19`\n"))
-#                                 sys.exit(-1)
-#                             if start_date <= check_date <= end_date:
-#                                 rows_to_search.append((row,c))
-#                 else:
-#                     last_rows_to_search = rows_to_search
-#                     new_rows_to_search = []
-#                     for row,c in last_rows_to_search:
-#                         row_date = row[column_name]
-#                         try:
-#                             check_date = datetime.strptime(row_date, "%Y-%m-%d").date()
-#                         except:
-#                             sys.stderr.write(cyan(f"Error: Metadata field `{row_date}` [at column: {column_name}, row: {c}] contains unaccepted date format\Please use format `YYYY-MM-DD`\n"))
-#                             sys.exit(-1)
-#                         if start_date <= check_date <= end_date:
-#                             new_rows_to_search.append((row,c))
-                    
-#                     rows_to_search = new_rows_to_search
-#         else:
-#             if rows_to_search == []:
-#                 with open(metadata, newline="") as f:
-#                     reader = csv.DictReader(f)
-#                     c =0
-#                     for row in reader:
-#                         c +=1
-#                         row_info = row[column_name]
-                        
-#                         if row_info == to_search:
-#                             rows_to_search.append((row,c))
-#             else:
-#                 last_rows_to_search = rows_to_search
-#                 new_rows_to_search = []
-#                 for row,c in last_rows_to_search:
-#                     row_info = row[column_name]
-                    
-#                     if row_info == to_search:
-#                         new_rows_to_search.append((row,c))
-#                 rows_to_search = new_rows_to_search
-#     query = os.path.join(config["outdir"], "from_metadata_query.csv")
-#     with open(query,"w") as fw:
-#         writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
-#         writer.writeheader()
-#         count = 0
-#         query_ids = []
-#         for row,c in rows_to_search:
-#             writer.writerow(row)
-#             count +=1
-#             query_ids.append(row[data_column])
-#         if count == 0:
-#             sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nExiting\n"))
-#             sys.exit(-1)
-#         print(green(f"Number of sequences matching defined query:") + f" {count}")
-#         if len(query_ids) < 100:
-#             for i in query_ids:
-#                 print(f" - {i}")
-#     config["query"] = query
-#     return query
+
 
 def check_args_and_config_list(argument, config_key, default, column_names, config):
 
@@ -739,9 +674,7 @@ def get_datadir(args_climb,args_datadir,remote,cwd,config):
         if not os.path.exists(data_dir):
             sys.stderr.write(cyan(f"Error: data directory not found at {data_dir}.\n")+ f"""The directory should contain the following files:\n\
     - cog_global_tree.nexus\n\
-    - cog_alignment_all.fasta\n\
     - cog_metadata.csv\n\
-    - cog_metadata_all.csv\n\
     - cog_global_metadata.csv\n\
     - cog_global_alignment.fasta\n\
     - cog_alignment.fasta\n\n\
@@ -750,27 +683,23 @@ To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
 3) Specify a local directory with the appropriate files\n\n""")
             sys.exit(-1)
             
-        cog_metadata,all_cog_metadata,cog_global_metadata = ("","","")
-        cog_seqs,all_cog_seqs = ("","")
+        cog_metadata,cog_global_metadata = ("","")
+        cog_seqs = ""
         cog_tree = ""
         
         cog_seqs = os.path.join(data_dir,"cog_alignment.fasta")
-        all_cog_seqs = os.path.join(data_dir,"cog_alignment_all.fasta")
         
         cog_metadata = os.path.join(data_dir,"cog_metadata.csv")
-        all_cog_metadata = os.path.join(data_dir,"cog_metadata_all.csv")
 
         cog_global_metadata = os.path.join(data_dir,"cog_global_metadata.csv")
         cog_global_seqs= os.path.join(data_dir,"cog_global_alignment.fasta")
 
         cog_tree = os.path.join(data_dir,"cog_global_tree.nexus")
 
-        if not os.path.isfile(cog_seqs) or not os.path.isfile(cog_global_seqs) or not os.path.isfile(all_cog_seqs) or not os.path.isfile(cog_metadata) or not os.path.isfile(all_cog_metadata) or not os.path.isfile(cog_global_metadata) or not os.path.isfile(cog_tree):
+        if not os.path.isfile(cog_seqs) or not os.path.isfile(cog_global_seqs) or not os.path.isfile(cog_metadata) or not os.path.isfile(cog_global_metadata) or not os.path.isfile(cog_tree):
             sys.stderr.write(cyan(f"""Error: cannot find correct data files at {data_dir}\n""")+ f"""The directory should contain the following files:\n\
     - cog_global_tree.nexus\n\
-    - cog_alignment_all.fasta\n\
     - cog_metadata.csv\n\
-    - cog_metadata_all.csv\n\
     - cog_global_metadata.csv\n\
     - cog_global_alignment.fasta\n\
     - cog_alignment.fasta\n\n\
@@ -780,19 +709,16 @@ To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
             sys.exit(-1)
         else:
             config["cog_seqs"] = cog_seqs
-            config["all_cog_seqs"] = all_cog_seqs
 
             config["cog_metadata"] = cog_metadata
-            config["all_cog_metadata"] = all_cog_metadata
+
             config["cog_global_metadata"] = cog_global_metadata
             config["cog_global_seqs"] = cog_global_seqs
             config["cog_tree"] = cog_tree
 
             print("Found cog data:")
             print("    -",cog_seqs)
-            print("    -",all_cog_seqs)
             print("    -",cog_metadata)
-            print("    -",all_cog_metadata)
             print("    -",cog_global_metadata)
             print("    -",cog_tree,"\n")
 
@@ -821,15 +747,12 @@ def get_remote_data(remote,uun,data_dir,args_datadir,args_climb,config):
             if status != 0:
                 sys.stderr.write(cyan("Error: rsync command failed.\nCheck your ssh is configured with Host bham.covid19.climb.ac.uk\nAlternatively enter your CLIMB username with -uun e.g. climb-covid19-smithj\nAlso, check if you have access to CLIMB from this machine and are in the UK\n\n"))
                 sys.exit(-1)
-        cog_metadata,all_cog_metadata,cog_global_metadata = ("","","")
-        cog_seqs,all_cog_seqs = ("","")
+        cog_metadata,cog_global_metadata = ("","")
+        cog_seqs = ""
         cog_tree = ""
 
         cog_seqs = os.path.join(data_dir,"civet-cat","cog_alignment.fasta")
-        all_cog_seqs = os.path.join(data_dir,"civet-cat","cog_alignment_all.fasta")
-
         cog_metadata = os.path.join(data_dir,"civet-cat","cog_metadata.csv")
-        all_cog_metadata = os.path.join(data_dir,"civet-cat","cog_metadata_all.csv")
 
         cog_global_metadata = os.path.join(data_dir,"civet-cat","cog_global_metadata.csv")
         cog_global_seqs= os.path.join(data_dir,"civet-cat","cog_global_alignment.fasta")
@@ -837,19 +760,16 @@ def get_remote_data(remote,uun,data_dir,args_datadir,args_climb,config):
         cog_tree = os.path.join(data_dir,"civet-cat","cog_global_tree.nexus")
 
         config["cog_seqs"] = cog_seqs
-        config["all_cog_seqs"] = all_cog_seqs
 
         config["cog_metadata"] = cog_metadata
-        config["all_cog_metadata"] = all_cog_metadata
         config["cog_global_metadata"] = cog_global_metadata
+
         config["cog_global_seqs"] = cog_global_seqs
         config["cog_tree"] = cog_tree
 
         print("Found cog data:")
         print("    -",cog_seqs)
-        print("    -",all_cog_seqs)
         print("    -",cog_metadata)
-        print("    -",all_cog_metadata)
         print("    -",cog_global_metadata)
         print("    -",cog_tree,"\n")
 
@@ -859,12 +779,144 @@ def get_remote_data(remote,uun,data_dir,args_datadir,args_climb,config):
 3) Specify a local directory with the appropriate files on. The following files are required:\n\
 - cog_global_tree.nexus\n\
 - cog_metadata.csv\n\
-- cog_metadata_all.csv\n\
 - cog_global_metadata.csv\n\
 - cog_global_alignment.fasta\n\
 - cog_alignment.fasta\n\n"""))
         sys.exit(-1)
 
+def get_dict_of_metadata_filters(to_parse, metadata):
+    column_names =""
+    query_dict = {}
+
+    with open(metadata, newline="") as f:
+        reader = csv.DictReader(f)
+        column_names = reader.fieldnames
+        
+        # get each of the factors for the query
+        for factor in to_parse:
+
+            # eg country=Ireland 
+            column_name,to_search = factor.split("=")
+
+            # if the factor is in the metadata file add to the query dict
+            if column_name in column_names:
+                query_dict[column_name] = to_search
+
+            else:
+                # exit and print what the valid column names are
+                cols = "\n- ".join(column_names)
+                cols = cols + "\n"
+                sys.stderr.write(cyan(f"""Error: `from-metadata` argument contains a column {column_name} that is not found in the metadata file supplied.
+Columns that were found:\n{cols}"""))
+                sys.exit(-1)
+    return query_dict,column_names
+
+def parse_date_range(metadata,column_name,to_search,rows_to_search):
+    date_range = to_search.split(":")
+    start_date = datetime.strptime(date_range[0], "%Y-%m-%d").date()
+    end_date = datetime.strptime(date_range[1], "%Y-%m-%d").date()
+    if rows_to_search == []:
+        with open(metadata, newline="") as f:
+            reader = csv.DictReader(f)
+            c =0
+            for row in reader:
+                c +=1
+                row_date = row[column_name]
+                try:
+                    check_date = datetime.strptime(row_date, "%Y-%m-%d").date()
+                except:
+                    sys.stderr.write(cyan(f"Error: Metadata field `{row_date}` [at column: {column_name}, row: {c}] contains unaccepted date format\Please use format `2020-05-19`\n"))
+                    sys.exit(-1)
+                if start_date <= check_date <= end_date:
+                    rows_to_search.append((row,c))
+    else:
+        last_rows_to_search = rows_to_search
+        new_rows_to_search = []
+        for row,c in last_rows_to_search:
+            row_date = row[column_name]
+            try:
+                check_date = datetime.strptime(row_date, "%Y-%m-%d").date()
+            except:
+                sys.stderr.write(cyan(f"Error: Metadata field `{row_date}` [at column: {column_name}, row: {c}] contains unaccepted date format\Please use format `YYYY-MM-DD`\n"))
+                sys.exit(-1)
+            if start_date <= check_date <= end_date:
+                new_rows_to_search.append((row,c))
+        
+        rows_to_search = new_rows_to_search
+
+def parse_general_field(metadata,column_name,to_search,rows_to_search):
+    if rows_to_search == []:
+        with open(metadata, newline="") as f:
+            reader = csv.DictReader(f)
+            c =0
+            for row in reader:
+                c +=1
+                row_info = row[column_name]
+                
+                if row_info == to_search:
+                    rows_to_search.append((row,c))
+    else:
+        last_rows_to_search = rows_to_search
+        new_rows_to_search = []
+        for row,c in last_rows_to_search:
+            row_info = row[column_name]
+            
+            if row_info == to_search:
+                new_rows_to_search.append((row,c))
+        rows_to_search = new_rows_to_search
+
+def generate_query_from_metadata(from_metadata, metadata, config):
+    to_parse = ""
+    if from_metadata:
+        to_parse = from_metadata
+        print(from_metadata)
+    elif "from_metadata" in config:
+        to_parse = config["from_metadata"]
+
+    data_column = config["data_column"]
+    config["input_column"] = data_column
+    
+    # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
+    query_dict,column_names = get_dict_of_metadata_filters(to_parse, metadata)
+    
+    # if this is empty, for each column to search it'll open the whole file and search them
+    # if it's not empty, it'll only search this list of rows
+    rows_to_search = []
+    
+    for column_name in query_dict:
+        
+        to_search = query_dict[column_name]
+
+        # assumes its a date range if it has a ':' and startswith 2020-, 2019- or 2021-
+        if ':' in to_search:
+            if to_search.startswith("2020-") or to_search.startswith("2019-") or to_search.startswith("2021-"):
+                print(f"Date range detected: {to_search}")
+                parse_date_range(metadata,column_name,to_search,rows_to_search)
+        else:
+            # parse by exact match 
+            parse_general_field(metadata,column_name,to_search,rows_to_search)
+
+    query = os.path.join(config["outdir"], "from_metadata_query.csv")
+
+    with open(query,"w") as fw:
+        writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
+        writer.writeheader()
+        count = 0
+
+        query_ids = []
+        for row,c in rows_to_search:
+            writer.writerow(row)
+            count +=1
+            query_ids.append(row[data_column])
+
+        if count == 0:
+            sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nExiting\n"))
+            sys.exit(-1)
+        print(green(f"Number of sequences matching defined query:") + f" {count}")
+        if len(query_ids) < 100:
+            for i in query_ids:
+                print(f" - {i}")
+    return query
 
 def get_sequencing_centre_header(sequencing_centre_arg,config):
     
