@@ -378,7 +378,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
         queries = []
         for row in reader:
             queries.append(row[input_column])
-            print(f" - {row[input_column]}")
+            
         print(green(f"Number of queries:") + f" {len(queries)}")
 
     tree_field_str = check_args_and_config_list(tree_fields, "fields", "adm1", column_names, config)
@@ -794,6 +794,7 @@ def parse_date_range(metadata,column_name,to_search,rows_to_search):
     date_range = to_search.split(":")
     start_date = datetime.strptime(date_range[0], "%Y-%m-%d").date()
     end_date = datetime.strptime(date_range[1], "%Y-%m-%d").date()
+
     if rows_to_search == []:
         with open(metadata, newline="") as f:
             reader = csv.DictReader(f)
@@ -820,8 +821,9 @@ def parse_date_range(metadata,column_name,to_search,rows_to_search):
                 sys.exit(-1)
             if start_date <= check_date <= end_date:
                 new_rows_to_search.append((row,c))
-        
+
         rows_to_search = new_rows_to_search
+    return rows_to_search
 
 def parse_general_field(metadata,column_name,to_search,rows_to_search):
     if rows_to_search == []:
@@ -832,19 +834,25 @@ def parse_general_field(metadata,column_name,to_search,rows_to_search):
                 c +=1
                 row_info = row[column_name]
                 
-                if row_info == to_search:
+                if row_info.upper() == to_search:
                     rows_to_search.append((row,c))
     else:
         last_rows_to_search = rows_to_search
+
         new_rows_to_search = []
         for row,c in last_rows_to_search:
             row_info = row[column_name]
             
-            if row_info == to_search:
+            if row_info.upper() == to_search:
+
                 new_rows_to_search.append((row,c))
+
         rows_to_search = new_rows_to_search
 
+    return rows_to_search
+
 def generate_query_from_metadata(from_metadata, metadata, config):
+
     to_parse = ""
     if from_metadata:
         to_parse = from_metadata
@@ -864,16 +872,18 @@ def generate_query_from_metadata(from_metadata, metadata, config):
     
     for column_name in query_dict:
         
-        to_search = query_dict[column_name]
-
+        to_search = query_dict[column_name].upper()
+        print(to_search)
         # assumes its a date range if it has a ':' and startswith 2020-, 2019- or 2021-
         if ':' in to_search:
             if to_search.startswith("2020-") or to_search.startswith("2019-") or to_search.startswith("2021-"):
                 print(f"Date range detected: {to_search}")
-                parse_date_range(metadata,column_name,to_search,rows_to_search)
+                rows_to_search = parse_date_range(metadata,column_name,to_search,rows_to_search)
+                print("date",len(rows_to_search))
         else:
             # parse by exact match 
-            parse_general_field(metadata,column_name,to_search,rows_to_search)
+            rows_to_search = parse_general_field(metadata,column_name,to_search,rows_to_search)
+            print("general",len(rows_to_search))
 
     query = os.path.join(config["outdir"], "from_metadata_query.csv")
 
