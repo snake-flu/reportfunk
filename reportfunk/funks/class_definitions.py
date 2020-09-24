@@ -12,6 +12,7 @@ class taxon():
     def __init__(self, name, global_lin, uk_lin, phylotype, label_fields, tree_fields, table_fields):
 
         self.name = name
+        self.display_name = name
 
         self.sample_date = "NA"
 

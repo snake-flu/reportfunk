@@ -65,11 +65,13 @@ def display_name(tree, tree_name, tree_dir, full_taxon_dict, query_dict, private
                     taxon_obj = full_taxon_dict[name]
                 
                     date = taxon_obj.sample_date
-                    k.traits["display"] = f"{name}|{date}"
+                    
+                    display_name_element = full_taxon_dict[name].display_name
+                    k.traits["display"] = f"{display_name_element}|{date}"
                     
                     if "adm2" in taxon_obj.attribute_dict.keys() and not private:
                         adm2 = taxon_obj.attribute_dict["adm2"]
-                        k.traits["display"] = f"{name}|{adm2}|{date}"
+                        k.traits["display"] = f"{display_name_element}|{adm2}|{date}"
 
                     count = 0
                     if len(custom_tip_fields) > 0: 

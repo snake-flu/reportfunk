@@ -52,6 +52,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
 
     uk_contract_dict = {"SCT":"Scotland", "WLS": "Wales", "ENG":"England", "NIR": "Northern_Ireland"}
 
+
     with open(metadata_file, "r") as f:
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
@@ -75,6 +76,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             closest_distance = sequence["closest_distance"]
             snps = sequence['snps']
 
+                
             phylotype = sequence["phylotype"]
             sample_date = sequence["sample_date"]
             
@@ -129,10 +131,10 @@ def Uk_adm1(input_value):
 
     return adm1
 
-def parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_fields, adm2_adm1_dict, table_fields, date_fields=None): 
+def parse_input_csv(input_csv, query_id_dict, input_column, display_name, tree_fields, label_fields, adm2_adm1_dict, table_fields, date_fields=None): 
+    
     new_query_dict = {}
     
-
     with open(input_csv, 'r') as f:
         reader = csv.DictReader(f)
         col_name_prep = next(reader)
@@ -148,6 +150,8 @@ def parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_f
             if name in query_id_dict.keys():
                 taxon = query_id_dict[name]
 
+                taxon.display_name = sequence[display_name]
+                
                 for field in date_fields:
                     if field in reader.fieldnames:
                         if sequence[field] != "":
@@ -177,7 +181,6 @@ def parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_f
                         #uk specific stuff##########
                         if col == "adm1":
                             adm1 = Uk_adm1(sequence[col])
-                            print(adm1)
                             taxon.attribute_dict["adm1"] = adm1
 
                         if col == "adm2":
@@ -284,23 +287,22 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, ful
     return full_tax_dict
     
 
-def parse_all_metadata(treedir, filtered_cog_metadata, full_metadata_file, input_csv, input_column, database_column, label_fields, tree_fields, table_fields, node_summary_option, adm2_to_adm1, date_fields=None):
+def parse_all_metadata(treedir, filtered_cog_metadata, full_metadata_file, input_csv, input_column, database_column, display_name, label_fields, tree_fields, table_fields, node_summary_option, adm2_to_adm1, date_fields=None):
 
     present_in_tree, tip_to_tree = parse_tree_tips(treedir)
     
     #parse the metadata with just those queries found in cog
     query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_cog_metadata, tip_to_tree, label_fields, tree_fields, table_fields) 
 
-    if input_csv != '':
-         #Any query information they have provided
-        query_dict = parse_input_csv(input_csv, query_id_dict, input_column, tree_fields, label_fields, adm2_to_adm1, table_fields, date_fields)
+    #Any query information they have provided
+    query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, tree_fields, label_fields, adm2_to_adm1, table_fields, date_fields)
     
     #parse the full background metadata
     full_tax_dict = parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, full_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields)
 
     return full_tax_dict, query_dict, tree_to_tip    
 
-def investigate_QC_fails(QC_file):
+def investigate_QC_fails(QC_file, tax_dict):
 
     fail_dict = {}
 
@@ -308,7 +310,7 @@ def investigate_QC_fails(QC_file):
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
         for sequence in in_data:
-            name = sequence["name"]
+            name = tax_dict[sequence["name"]].display_name
             reason = sequence["reason_for_failure"]
 
             if "seq_len" in reason:

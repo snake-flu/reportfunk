@@ -21,7 +21,11 @@ def make_custom_table(query_dict, table_fields, snp_data_in_table):
             df_dict = df_dict_seqprovided
             seqprovided += 1
 
-        df_dict["Query ID"].append(query.query_id.replace("|","\|"))
+        if query.display_name != query.name:
+            df_dict["Query ID"].append(query.display_name.replace("|","\|"))
+        else:
+            df_dict["Query ID"].query.query_id.replace("|","\|")
+        
         
         if query.in_db:
             df_dict["Sequence name in tree"].append(query.name)
@@ -77,7 +81,10 @@ def make_full_civet_table(query_dict, tree_fields, label_fields, input_column, o
             df_dict = df_dict_seqprovided
             seqprovided += 1
         
-        df_dict["Query ID"].append(query.query_id.replace("|","\|"))
+        if query.display_name != query.name:
+            df_dict["Query ID"].append(query.display_name.replace("|","\|"))
+        else:
+            df_dict["Query ID"].query.query_id.replace("|","\|")
         
         if query.in_db: 
             df_dict["Sequence name in Tree"].append(query.name)        
