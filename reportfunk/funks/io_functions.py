@@ -354,8 +354,9 @@ def node_summary(node_summary,config):
     print(green(f"Summarise collapsed nodes by:") + f" {summary}")
     config["node_summary"] = summary
 
-def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, config):
-    
+def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, display_name_arg, config):
+    #we'll have to restructure this a bit so that the defaults can be specified - at the moment, they're all civet defaults
+
     acceptable_colours = get_colours()
     queries = []
     
@@ -363,8 +364,22 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
 
     graphics_output = []
     query_file = config["query"]
-    input_column = config["input_column"]
     column_names = []
+
+    if input_column:
+        input_column = input_column
+    elif "input_column" in config:
+        input_column = config["input_column"]
+    else:
+        input_column = "name"
+
+    if display_name_arg:
+        display_name = display_name_arg
+    elif "display_name" in config:
+        display_name = config['display_name']
+    else:
+        display_name = input_column
+
 
     with open(query_file, newline="") as f:
         reader = csv.DictReader(f)
@@ -373,6 +388,12 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
         if input_column not in column_names: # Checking input column present in query file
             sys.stderr.write(cyan(f"Error: Query file missing header field {input_column}\n"))
             sys.exit(-1)
+        if display_name not in column_names:
+            sys.stderr.write(cyan(f"Error: Query file missing header field {display_name}\n"))
+            sys.exit(-1)
+        else:
+            config["display_name"] = display_name
+
 
         print(green("Input querys to process:"))
         queries = []
