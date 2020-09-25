@@ -36,6 +36,7 @@ def type_input_file(input_arg,cwd,config):
     if input_arg:
         if "," in input_arg:
             id_list = input_arg.split(",")
+            print(green(f"ID string detected"))
             query = make_csv_from_ids(id_list, config)
             config["path_to_query"] = config["outdir"]
         else:
@@ -53,43 +54,22 @@ def type_input_file(input_arg,cwd,config):
                 print(green(f"Input file:") + f" {input_file}")
                 query = input_file
 
+            else:
+                sys.stderr.write(cyan(f"Error: -i,--input accepts either a csv or yaml file, or a comma-separated string of IDs"))
+                sys.exit(-1)
+
     return query,configfile
     
-def check_query_file(query, ids_arg, cwd, config):
-    queryfile = ""
-    
-    if query:
-        queryfile = query
-
-    elif "query" in config:
-
-        queryfile = os.path.join(config["path_to_query"],config["query"])
-
-    elif ids_arg:
-        id_list = ids_arg.split(",")
-        queryfile = make_csv_from_ids(id_list, config)
-
-    elif "ids" in config:
-        queryfile = make_csv_from_ids(config["ids"], config)
-
-    else:
-        sys.stderr.write(cyan(f"Error: no query input provided"))
-        sys.exit(-1)
-
-    print("queryfile is",queryfile)
-    if os.path.exists(queryfile):
-        config["query"] = queryfile
-    else:
-        sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids (e.g. EPI12345,EPI23456), please use in conjunction with the `--id-string` flag or provide `ids` in the config file \n."))
-        sys.exit(-1)
-
 def make_csv_from_ids(id_list, config):
     query = os.path.join(config["outdir"], "query.csv")
     with open(query,"w") as fw:
         in_col = config["input_column"]
         fw.write(f"{in_col}\n")
+        c = 0
         for i in id_list:
+            c +=1
             fw.write(i+'\n')
+        print(green(f"Number of IDs:") + f" {c}")
     return query
 
 def parse_yaml_file(configfile,config):
@@ -97,10 +77,30 @@ def parse_yaml_file(configfile,config):
         input_config = yaml.load(f, Loader=yaml.FullLoader)
         for key in input_config:
             snakecase_key = key.replace("-","_")
+
             if not snakecase_key in config:
                 config[snakecase_key] = input_config[key]
 
     return config
+
+def check_query_file(query, cwd, config):
+    queryfile = ""
+    
+    if query:
+        queryfile = query
+
+    elif "query" in config:
+        queryfile = os.path.join(config["path_to_query"],config["query"])
+
+    else:
+        sys.stderr.write(cyan(f"Error: no query input provided"))
+        sys.exit(-1)
+
+    if os.path.exists(queryfile):
+        config["query"] = queryfile
+    else:
+        sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids (e.g. EPI12345,EPI23456), please use in conjunction with the `--id-string` flag or provide `ids` in the config file \n."))
+        sys.exit(-1)
 
 def get_snakefile(thisdir):
     snakefile = os.path.join(thisdir, 'scripts','Snakefile')
@@ -182,29 +182,6 @@ def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     
     config["tempdir"] = tempdir 
     return tempdir
-
-def check_query_file(query, cwd, config):
-    queryfile = ""
-    
-    if query:
-        queryfile = query
-
-    elif "query" in config:
-        queryfile = os.path.join(config["path_to_query"],config["query"])
-
-    elif "ids" in config:
-        queryfile = make_csv_from_ids(config["ids"], config)
-
-    else:
-        sys.stderr.write(cyan(f"Error: no query input provided"))
-        sys.exit(-1)
-
-    print("queryfile is",queryfile)
-    if os.path.exists(queryfile):
-        config["query"] = queryfile
-    else:
-        sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids (e.g. EPI12345,EPI23456), please use in conjunction with the `--id-string` flag or provide `ids` in the config file \n."))
-        sys.exit(-1)
 
 def local_lineages_to_config(central, neighbouring, region, config):
 
@@ -354,7 +331,7 @@ def node_summary(node_summary,config):
     print(green(f"Summarise collapsed nodes by:") + f" {summary}")
     config["node_summary"] = summary
 
-def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, display_name_arg, config):
+def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, display_name_arg, config, default_dict):
     #we'll have to restructure this a bit so that the defaults can be specified - at the moment, they're all civet defaults
 
     acceptable_colours = get_colours()
@@ -371,7 +348,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     elif "input_column" in config:
         input_column = config["input_column"]
     else:
-        input_column = "name"
+        input_column = default_dict["input_column"]
 
     if display_name_arg:
         display_name = display_name_arg
@@ -379,7 +356,6 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
         display_name = config['display_name']
     else:
         display_name = input_column
-
 
     with open(query_file, newline="") as f:
         reader = csv.DictReader(f)
@@ -402,20 +378,20 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
             
         print(green(f"Number of queries:") + f" {len(queries)}")
 
-    tree_field_str = check_args_and_config_list(tree_fields, "fields", "adm1", column_names, config)
+    tree_field_str = check_args_and_config_list(tree_fields, "fields", default_dict["tree_fields"], column_names, config)
     print(green(f"Fields shown on tree:") + f" {tree_field_str}")
     config["tree_fields"] = tree_field_str
         
-    labels_str = check_args_and_config_list(label_fields, "label_fields", "NONE", column_names, config)
+    labels_str = check_args_and_config_list(label_fields, "label_fields", default_dict["label_fields"], column_names, config)
 
     print(green(f"Labelling by:") + f" {labels_str}")
     config["label_fields"] = labels_str
 
-    date_field_str = check_args_and_config_list(date_fields,"date_fields","NONE", column_names,config)
+    date_field_str = check_args_and_config_list(date_fields,"date_fields",default_dict["date_fields"], column_names,config)
     config["date_fields"] = date_field_str
 
     
-    graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", "adm1", "default",column_names, acceptable_colours, config)
+    graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["graphic_dict"] = graphic_dict_output
 
@@ -438,6 +414,7 @@ def check_table_fields(table_fields, snp_data, config):
         config["snps_in_seq_table"] = False
     #otherwise it's just specified in the config
 
+###i got to here with default dict stuff -A
 
 def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config):
 
@@ -656,7 +633,72 @@ def get_package_data(cog_report,thisdir,config):
         sys.exit(-1)
     config["report_template"] = report_template
 
-def get_datadir(args_climb,args_datadir,remote,cwd,config):
+def print_data_error():
+    sys.stderr.write(cyan(f"Error: data directory not found at {data_dir}.\n")+ f"""The directory should contain the following files:\n\
+    - cog_global_tree.nexus\n\
+    - cog_metadata.csv\n\
+    - cog_global_metadata.csv\n\
+    - cog_global_alignment.fasta\n\
+    - cog_alignment.fasta\n\n\
+To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
+2) Run using `--remote-sync` flag and your CLIMB username specified e.g. `-uun climb-covid19-otoolexyz`\n\
+3) Specify a local directory with the appropriate files\n\n""")
+
+def rsync_data_from_climb(uun, data_dir):
+    rsync_command = f"rsync -avzh {uun}@bham.covid19.climb.ac.uk:/cephfs/covid/bham/civet-cat '{data_dir}'"
+    print(green(f"Syncing civet data to {data_dir}"))
+    status = os.system(rsync_command)
+    if status != 0:
+        sys.stderr.write(cyan("Error: rsync command failed.\nCheck your user name is a valid CLIMB username e.g. climb-covid19-smithj\nAlso, check if you have access to CLIMB from this machine and are in the UK\n\n"))
+        sys.exit(-1)
+
+def get_remote_data(uun,data_dir,config):
+    config["remote"]= True
+    if uun:
+        config["username"] = uun
+        rsync_data_from_climb(uun, data_dir)
+    elif "username" in config:
+        uun = config["username"]
+        rsync_data_from_climb(uun, data_dir)
+    else:
+        rsync_command = f"rsync -avzh bham.covid19.climb.ac.uk:/cephfs/covid/bham/civet-cat '{data_dir}'"
+        print(f"Syncing civet data to {data_dir}")
+        status = os.system(rsync_command)
+        if status != 0:
+            sys.stderr.write(cyan("Error: rsync command failed.\nCheck your ssh is configured with Host bham.covid19.climb.ac.uk\nAlternatively enter your CLIMB username with -uun e.g. climb-covid19-smithj\nAlso, check if you have access to CLIMB from this machine and check if you are in the UK\n\n"))
+            sys.exit(-1)
+
+    cog_metadata,cog_global_metadata = ("","")
+    cog_seqs = ""
+    cog_tree = ""
+
+    cog_seqs = os.path.join(data_dir,"civet-cat","cog_alignment.fasta")
+    cog_metadata = os.path.join(data_dir,"civet-cat","cog_metadata.csv")
+
+    cog_global_metadata = os.path.join(data_dir,"civet-cat","cog_global_metadata.csv")
+    cog_global_seqs= os.path.join(data_dir,"civet-cat","cog_global_alignment.fasta")
+
+    cog_tree = os.path.join(data_dir,"civet-cat","cog_global_tree.nexus")
+
+    if not os.path.isfile(cog_seqs) or not os.path.isfile(cog_global_seqs) or not os.path.isfile(cog_metadata) or not os.path.isfile(cog_global_metadata) or not os.path.isfile(cog_tree):
+        print_data_error()
+        sys.exit(-1)
+
+    config["cog_seqs"] = cog_seqs
+
+    config["cog_metadata"] = cog_metadata
+    config["cog_global_metadata"] = cog_global_metadata
+
+    config["cog_global_seqs"] = cog_global_seqs
+    config["cog_tree"] = cog_tree
+
+    print("Found cog data:")
+    print("    -",cog_seqs)
+    print("    -",cog_metadata)
+    print("    -",cog_global_metadata)
+    print("    -",cog_tree,"\n")
+
+def get_datadir(args_climb,args_uun,args_datadir,remote,cwd,config,default_dict):
     data_dir = ""
     if args_climb:
         data_dir = "/cephfs/covid/bham/civet-cat"
@@ -669,18 +711,16 @@ def get_datadir(args_climb,args_datadir,remote,cwd,config):
 
     elif args_datadir:
         data_dir = os.path.join(cwd, args_datadir)
-        
+
+    elif "datadir" in config:
+        data_dir = os.path.join(cwd, args_datadir)
+
+    else:
+        data_dir = default_dict["datadir"]
+
     if not remote:
         if not os.path.exists(data_dir):
-            sys.stderr.write(cyan(f"Error: data directory not found at {data_dir}.\n")+ f"""The directory should contain the following files:\n\
-    - cog_global_tree.nexus\n\
-    - cog_metadata.csv\n\
-    - cog_global_metadata.csv\n\
-    - cog_global_alignment.fasta\n\
-    - cog_alignment.fasta\n\n\
-To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
-2) Run using `--remote-sync` flag and your CLIMB username specified e.g. `-uun climb-covid19-otoolexyz`\n\
-3) Specify a local directory with the appropriate files\n\n""")
+            print_data_error()
             sys.exit(-1)
             
         cog_metadata,cog_global_metadata = ("","")
@@ -688,7 +728,6 @@ To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
         cog_tree = ""
         
         cog_seqs = os.path.join(data_dir,"cog_alignment.fasta")
-        
         cog_metadata = os.path.join(data_dir,"cog_metadata.csv")
 
         cog_global_metadata = os.path.join(data_dir,"cog_global_metadata.csv")
@@ -697,19 +736,10 @@ To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
         cog_tree = os.path.join(data_dir,"cog_global_tree.nexus")
 
         if not os.path.isfile(cog_seqs) or not os.path.isfile(cog_global_seqs) or not os.path.isfile(cog_metadata) or not os.path.isfile(cog_global_metadata) or not os.path.isfile(cog_tree):
-            sys.stderr.write(cyan(f"""Error: cannot find correct data files at {data_dir}\n""")+ f"""The directory should contain the following files:\n\
-    - cog_global_tree.nexus\n\
-    - cog_metadata.csv\n\
-    - cog_global_metadata.csv\n\
-    - cog_global_alignment.fasta\n\
-    - cog_alignment.fasta\n\n\
-To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
-2) Run using `--remote-sync` flag and your CLIMB username specified e.g. `-uun climb-covid19-otoolexyz`\n\
-3) Specify a local directory with the appropriate files\n\n""")
+            print_data_error()
             sys.exit(-1)
         else:
             config["cog_seqs"] = cog_seqs
-
             config["cog_metadata"] = cog_metadata
 
             config["cog_global_metadata"] = cog_global_metadata
@@ -722,68 +752,11 @@ To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
             print("    -",cog_global_metadata)
             print("    -",cog_tree,"\n")
 
-    else:
-        print("No data directory specified, will save data in civet-cat in current working directory")
-        data_dir = cwd
-        
-    return data_dir
+    elif remote:
+        get_remote_data(args_uun, data_dir, config)
+
+    config["datadir"]=data_dir
     
-def get_remote_data(remote,uun,data_dir,args_datadir,args_climb,config):
-    if remote:
-        config["remote"]= True
-        if uun:
-            config["username"] = uun
-        
-            rsync_command = f"rsync -avzh {uun}@bham.covid19.climb.ac.uk:/cephfs/covid/bham/civet-cat '{data_dir}'"
-            print(green(f"Syncing civet data to {data_dir}"))
-            status = os.system(rsync_command)
-            if status != 0:
-                sys.stderr.write(cyan("Error: rsync command failed.\nCheck your user name is a valid CLIMB username e.g. climb-covid19-smithj\nAlso, check if you have access to CLIMB from this machine and are in the UK\n\n"))
-                sys.exit(-1)
-        else:
-            rsync_command = f"rsync -avzh bham.covid19.climb.ac.uk:/cephfs/covid/bham/civet-cat '{data_dir}'"
-            print(f"Syncing civet data to {data_dir}")
-            status = os.system(rsync_command)
-            if status != 0:
-                sys.stderr.write(cyan("Error: rsync command failed.\nCheck your ssh is configured with Host bham.covid19.climb.ac.uk\nAlternatively enter your CLIMB username with -uun e.g. climb-covid19-smithj\nAlso, check if you have access to CLIMB from this machine and are in the UK\n\n"))
-                sys.exit(-1)
-        cog_metadata,cog_global_metadata = ("","")
-        cog_seqs = ""
-        cog_tree = ""
-
-        cog_seqs = os.path.join(data_dir,"civet-cat","cog_alignment.fasta")
-        cog_metadata = os.path.join(data_dir,"civet-cat","cog_metadata.csv")
-
-        cog_global_metadata = os.path.join(data_dir,"civet-cat","cog_global_metadata.csv")
-        cog_global_seqs= os.path.join(data_dir,"civet-cat","cog_global_alignment.fasta")
-
-        cog_tree = os.path.join(data_dir,"civet-cat","cog_global_tree.nexus")
-
-        config["cog_seqs"] = cog_seqs
-
-        config["cog_metadata"] = cog_metadata
-        config["cog_global_metadata"] = cog_global_metadata
-
-        config["cog_global_seqs"] = cog_global_seqs
-        config["cog_tree"] = cog_tree
-
-        print("Found cog data:")
-        print("    -",cog_seqs)
-        print("    -",cog_metadata)
-        print("    -",cog_global_metadata)
-        print("    -",cog_tree,"\n")
-
-    elif not args_datadir and not args_climb:
-        sys.stderr.write(cyan("""Error: no way to find source data.\n\nTo run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
-2) Run using `--remote-sync` flag and your CLIMB username specified e.g. `-uun climb-covid19-otoolexyz`\n\
-3) Specify a local directory with the appropriate files on. The following files are required:\n\
-- cog_global_tree.nexus\n\
-- cog_metadata.csv\n\
-- cog_global_metadata.csv\n\
-- cog_global_alignment.fasta\n\
-- cog_alignment.fasta\n\n"""))
-        sys.exit(-1)
-
 def get_dict_of_metadata_filters(to_parse, metadata):
     column_names =""
     query_dict = {}
