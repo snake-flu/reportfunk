@@ -414,9 +414,7 @@ def check_table_fields(table_fields, snp_data, config):
         config["snps_in_seq_table"] = False
     #otherwise it's just specified in the config
 
-###i got to here with default dict stuff -A
-
-def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config):
+def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config,default_dict):
 
     map_settings = False
     query_file = config["query"]
@@ -428,6 +426,9 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
     elif "map_sequences" in config:
         map_settings = config["map_sequences"]
     
+    else:
+        map_settings = default_dict["map_sequences"]
+
     if map_settings:
         if "map_cols" in config:
             map_inputs = config["map_cols"].replace(" ","")
@@ -496,16 +497,17 @@ def check_date_format(date_string):
         sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
         sys.exit(-1)
 
-def local_lineages_config(local_lineages, config):
+def local_lineages_config(local_lineages, config,default_dict):
 
     query_file = config["query"]
 
-    if "local_lineages" in config:
-        pass
+    
     elif local_lineages:
         config['local_lineages'] = True
+    elif "local_lineages" in config:
+        pass
     else:
-        config["local_lineages"] = False
+        config["local_lineages"] = default_dict["local_lineages"]
 
     if config["local_lineages"]:
         #now made it so that it can take adm2 from the combined metadata 
@@ -517,6 +519,7 @@ def local_lineages_config(local_lineages, config):
         #         sys.exit(-1)
 
         if config["date_restriction"]:
+        ## does this need to check if it also is in the default dict or in an arg?
             if config["date_range_start"] and type(config["date_range_start"]) == str:
                 check_date_format(config["date_range_start"])
             if config["date_range_end"] and type(config["date_range_end"]) == str:
@@ -528,10 +531,6 @@ def local_lineages_config(local_lineages, config):
                 print(green(f"Local lineage analysis restricted to {config['date_range_start']} to present"))
             else:
                 print(green(f"Local lineage analysis restricted to {config['date_window']} days around the sampling range"))
-
-    else:
-        config['local_lineages'] = False
-
 
 def check_summary_fields(full_metadata, summary_field, config):
 
@@ -551,11 +550,24 @@ def check_summary_fields(full_metadata, summary_field, config):
         print(green(f"Going to summarise collapsed nodes by: ") + f"{summary}")
         config["node_summary"] = summary
 
+def check_arg_config_default(key,arg,config,default):
+    new_str = ""
+    if arg:
+        new_str = arg
+    elif key in config:
+        new_str = config[key]
+    else:
+        new_str = default[key]
+    return new_str
 
-def input_file_qc(minlen,maxambig,config):
+def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
     post_qc_query = ""
     qc_fail = ""
     fasta = config["fasta"]
+
+    minlen = check_arg_config_default("minlen",minlen_arg,config,default_dict)
+    maxambig = check_arg_config_default("maxambig",maxambig_arg,config,default_dict)
+
     if fasta != "":
         do_not_run = []
         run = []
@@ -578,19 +590,20 @@ def input_file_qc(minlen,maxambig,config):
         with open(post_qc_query,"w") as fw:
             SeqIO.write(run, fw, "fasta")
         qc_fail = os.path.join(config["outdir"],'query.failed_qc.csv')
+
+        input_column = config["input_column"]
         with open(qc_fail,"w") as fw:
-            fw.write("name,reason_for_failure\n")
+            fw.write(f"{input_column},reason_for_failure\n")
             for record in do_not_run:
                 desc = record.description.split(" ")
                 for i in desc:
                     if i.startswith("fail="):
                         fw.write(f"{record.id},{i}\n")
 
-
     config["post_qc_query"] = post_qc_query
     config["qc_fail"] = qc_fail
 
-def get_package_data(cog_report,thisdir,config):
+def get_package_data(cog_report,thisdir,config,default_dict):
     reference_fasta = pkg_resources.resource_filename('civet', 'data/reference.fasta')
     outgroup_fasta = pkg_resources.resource_filename('civet', 'data/outgroup.fasta')
     polytomy_figure = pkg_resources.resource_filename('civet', 'data/polytomies.png')
@@ -625,12 +638,15 @@ def get_package_data(cog_report,thisdir,config):
 
     if cog_report:
         report_template = os.path.join(thisdir, 'scripts','COG_template.pmd')
+    elif "cog_report" in config:
+        report_template = os.path.join(thisdir, 'scripts','COG_template.pmd')
     else:
         report_template = os.path.join(thisdir, 'scripts','civet_template.pmd')
     
     if not os.path.exists(report_template):
         sys.stderr.write(cyan(f'Error: cannot find report_template at {report_template}\n'))
         sys.exit(-1)
+
     config["report_template"] = report_template
 
 def print_data_error():
@@ -926,19 +942,15 @@ def get_sequencing_centre_header(sequencing_centre_arg,config):
         sys.stderr.write(cyan(f'Error: sequencing centre must be one of the following:\n{sc_string}\n'))
         sys.exit(-1)
 
-def distance_config(config):
-    # if distance:
-    #     config["up_distance"] = distance
-    #     config["down_distance"] = distance
+def distance_config(distance,up_distance,down_distance,config,default_dict):
 
-    # if up_distance:
-    #     config["up_distance"] = up_distance
+    distance = check_arg_config_default(distance, "distance",config, default_dict)
+    down_distance = check_arg_config_default(down_distance, "down_distance",config, default_dict)
+    up_distance = check_arg_config_default(up_distance, "up_distance",config, default_dict)
 
-    # if down_distance:
-    #     config["down_distance"] = down_distance
-
-    down_distance = config["down_distance"]
-    up_distance = config["up_distance"]
+    config["distance"] = distance
+    config["down_distance"] = down_distance
+    config["up_distance"] = up_distance
 
     print(green(f"Extraction radius:\n")+f"\tUp distance: {up_distance}\n\tDown distance: {down_distance}\n")
 
