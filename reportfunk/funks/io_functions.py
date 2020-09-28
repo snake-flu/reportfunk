@@ -19,12 +19,12 @@ YELLOW = '\033[93m'
 CYAN = '\u001b[36m'
 DIM = '\033[2m'
 
-def make_config_file(config):
+def make_config_file(config_name, config):
     config_to_write = {}
     for k in config:
         if k != "generate_config":
             config_to_write[k] = config[k]
-    config_out = os.path.join(config["outdir"],"civet_config.yaml")
+    config_out = os.path.join(config["outdir"],config_name)
     with open(config_out,"w") as fw:
         yaml.dump(config_to_write, fw)
         print(green(f"Config file written to {config_out}."))
@@ -221,46 +221,46 @@ def get_tree_name_stem(tree_dir,config):
     config["tree_name_stem"] = tree_name_stem
 
 
+def check_args_and_config_list(config_key, argument, column_names,config,default_dict):
 
-def check_args_and_config_list(argument, config_key, default, column_names, config):
+    input_to_check = check_arg_config_default(config_key,argument,config,default_dict)
 
     full_metadata_headers = get_full_headers()
 
     list_of_fields = []
     arg_list = []
-    if argument:
-        arg_list = argument.split(",")
-        for field in arg_list:
-            field = field.replace(" ","")
-            if field in column_names or field in full_metadata_headers:
-                list_of_fields.append(field)
-            else:
-                sys.stderr.write(cyan(f"Error: {field} field not found in query metadata file or background metadata file for {config_key}\n"))
-                sys.exit(-1)
 
-    elif config_key in config:
-        if type(config[config_key]) != list:
-            arg_list = config[config_key].split(",")
+    if not type(input_to_check) is list:
+        input_to_check = input_to_check.split(",")
+    
+    for field in input_to_check:
+        field = field.replace(" ","")
+        if field in column_names or field in full_metadata_headers:
+            list_of_fields.append(field)
         else:
-            arg_list = config[config_key]
+            sys.stderr.write(cyan(f"Error: '{field}' column not found in query metadata file or background metadata file for {config_key}\n"))
+            sys.exit(-1)
 
-        for field in arg_list:
-            new_field = field.replace(" ","")
-            if new_field in column_names or new_field in full_metadata_headers:
-                list_of_fields.append(new_field)
-            else:
-                sys.stderr.write(cyan(f"Error: {new_field} field not found in query metadata file or background metadata file for {config_key}\n"))
-                sys.exit(-1)
+    field_str = ",".join(input_to_check)
 
-    else:
-        if type(default) != list:
-            arg_list.append(default) 
-        else:
-            arg_list.extend(default)       
-        
-    field_str = ",".join(arg_list)
+    config[config_key] = field_str
+
+    print(green(f"{config_key} shown:") + f" {field_str}")
+    
     return field_str
 
+def check_metadata_for_seach_columns(data_column_arg,config,default_dict):
+
+    data_column = check_arg_config_default("data_column",data_column_arg,config,default_dict)
+    
+    with open(config["cog_metadata"],"r") as f:
+        reader = csv.DictReader(f)
+        header = reader.fieldnames
+        if data_column not in header:
+            sys.stderr.write(cyan(f"{data_column} column not in metadata"))
+            sys.exit(-1)
+
+    config["data_column"] = data_column
 
 def check_args_and_config_dict(argument, config_key, default_key, default_value,column_names, value_check, config):
 
@@ -340,24 +340,15 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     labels = []
 
     graphics_output = []
-    query_file = config["query"]
     column_names = []
 
-    if input_column:
-        input_column = input_column
-    elif "input_column" in config:
-        input_column = config["input_column"]
-    else:
-        input_column = default_dict["input_column"]
+    input_column = check_arg_config_default("input_column",input_column,config,default_dict) 
 
-    if display_name_arg:
-        display_name = display_name_arg
-    elif "display_name" in config:
-        display_name = config['display_name']
-    else:
+    display_name = check_arg_config_default("display_name",display_name_arg,config,default_dict) 
+    if not display_name:
         display_name = input_column
 
-    with open(query_file, newline="") as f:
+    with open(config["query"], newline="") as f:
         reader = csv.DictReader(f)
         column_names = reader.fieldnames
 
@@ -368,8 +359,8 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
             sys.stderr.write(cyan(f"Error: Query file missing header field {display_name}\n"))
             sys.exit(-1)
         else:
+            config["input_column"] = input_column
             config["display_name"] = display_name
-
 
         print(green("Input querys to process:"))
         queries = []
@@ -378,35 +369,23 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
             
         print(green(f"Number of queries:") + f" {len(queries)}")
 
-    tree_field_str = check_args_and_config_list(tree_fields, "fields", default_dict["tree_fields"], column_names, config)
-    print(green(f"Fields shown on tree:") + f" {tree_field_str}")
-    config["tree_fields"] = tree_field_str
+    tree_field_str = check_args_and_config_list("tree_fields", tree_fields, column_names, config, default_dict)
         
-    labels_str = check_args_and_config_list(label_fields, "label_fields", default_dict["label_fields"], column_names, config)
+    labels_str = check_args_and_config_list("label_fields", label_fields, column_names, config, default_dict)
 
-    print(green(f"Labelling by:") + f" {labels_str}")
-    config["label_fields"] = labels_str
-
-    date_field_str = check_args_and_config_list(date_fields,"date_fields",default_dict["date_fields"], column_names,config)
-    config["date_fields"] = date_field_str
-
+    date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
     
     graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["graphic_dict"] = graphic_dict_output
 
-def check_table_fields(table_fields, snp_data, config):
+def check_table_fields(table_fields, snp_data, config, default_dict):
     
     with open(config["query"], newline="") as f:
         reader = csv.DictReader(f)
         column_names = reader.fieldnames
 
-    default_list = ["sample_date", "uk_lineage", "lineage", "phylotype"]
-
-    table_field_str = check_args_and_config_list(table_fields, "table_fields", default_list, column_names, config)
-
-    config["table_fields"] = table_field_str
-    print(green(f"Putting following in table: ") + f" {table_field_str}")
+    table_field_str = check_args_and_config_list("table_fields",table_fields, column_names, config, default_dict)
 
     if snp_data:
         config["snps_in_seq_table"] = True
@@ -500,9 +479,8 @@ def check_date_format(date_string):
 def local_lineages_config(local_lineages, config,default_dict):
 
     query_file = config["query"]
-    if config["local_lineages"]:
-        pass
-    elif local_lineages:
+
+    if local_lineages:
         config['local_lineages'] = True
     elif "local_lineages" in config:
         pass
@@ -603,175 +581,6 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
     config["post_qc_query"] = post_qc_query
     config["qc_fail"] = qc_fail
 
-def get_package_data(cog_report,thisdir,config,default_dict):
-    reference_fasta = pkg_resources.resource_filename('civet', 'data/reference.fasta')
-    outgroup_fasta = pkg_resources.resource_filename('civet', 'data/outgroup.fasta')
-    polytomy_figure = pkg_resources.resource_filename('civet', 'data/polytomies.png')
-    report_args = pkg_resources.resource_filename('civet', 'data/report_arguments.txt')
-    footer_fig = pkg_resources.resource_filename('civet', 'data/footer.png')
-    clean_locs = pkg_resources.resource_filename('civet', 'data/mapping_files/adm2_cleaning.csv')
-    map_input_1 = pkg_resources.resource_filename('civet', 'data/mapping_files/gadm36_GBR_2.json')
-    map_input_2 = pkg_resources.resource_filename('civet', 'data/mapping_files/channel_islands.json')  
-    map_input_3 = pkg_resources.resource_filename('civet', 'data/mapping_files/NI_counties.geojson')  
-    map_input_4 = pkg_resources.resource_filename('civet', 'data/mapping_files/Mainland_HBs_gapclosed_mapshaped_d3.json')
-    map_input_5 = pkg_resources.resource_filename('civet', 'data/mapping_files/urban_areas_UK.geojson')
-    map_input_6 = pkg_resources.resource_filename('civet', 'data/mapping_files/UK_outPC_coords.csv')
-    spatial_translations_1 = pkg_resources.resource_filename('civet', 'data/mapping_files/HB_Translation.pkl')
-    spatial_translations_2 = pkg_resources.resource_filename('civet', 'data/mapping_files/adm2_regions_to_coords.csv')
-    appendix_text = pkg_resources.resource_filename('civet', 'data/appendix.txt')
-    config["reference_fasta"] = reference_fasta
-    config["outgroup_fasta"] = outgroup_fasta
-    config["polytomy_figure"] = polytomy_figure
-    config["report_args"] = report_args
-    config["footer"] = footer_fig
-    config["appendix"] = appendix_text
-    
-    config["clean_locs"] = clean_locs
-    config["uk_map"] = map_input_1
-    config["channels_map"] = map_input_2
-    config["ni_map"] = map_input_3
-    config["uk_map_d3"] = map_input_4
-    config["urban_centres"] = map_input_5
-    config["pc_file"] = map_input_6
-    config["HB_translations"] = spatial_translations_1
-    config["PC_translations"] = spatial_translations_2
-
-    if cog_report:
-        report_template = os.path.join(thisdir, 'scripts','COG_template.pmd')
-    elif "cog_report" in config:
-        report_template = os.path.join(thisdir, 'scripts','COG_template.pmd')
-    else:
-        report_template = os.path.join(thisdir, 'scripts','civet_template.pmd')
-    
-    if not os.path.exists(report_template):
-        sys.stderr.write(cyan(f'Error: cannot find report_template at {report_template}\n'))
-        sys.exit(-1)
-
-    config["report_template"] = report_template
-
-def print_data_error(data_dir):
-    sys.stderr.write(cyan(f"Error: data directory not found at {data_dir}.\n")+ f"""The directory should contain the following files:\n\
-    - cog_global_tree.nexus\n\
-    - cog_metadata.csv\n\
-    - cog_global_metadata.csv\n\
-    - cog_global_alignment.fasta\n\
-    - cog_alignment.fasta\n\n\
-To run civet please either\n1) ssh into CLIMB and run with --CLIMB flag\n\
-2) Run using `--remote-sync` flag and your CLIMB username specified e.g. `-uun climb-covid19-otoolexyz`\n\
-3) Specify a local directory with the appropriate files\n\n""")
-
-def rsync_data_from_climb(uun, data_dir):
-    rsync_command = f"rsync -avzh {uun}@bham.covid19.climb.ac.uk:/cephfs/covid/bham/civet-cat '{data_dir}'"
-    print(green(f"Syncing civet data to {data_dir}"))
-    status = os.system(rsync_command)
-    if status != 0:
-        sys.stderr.write(cyan("Error: rsync command failed.\nCheck your user name is a valid CLIMB username e.g. climb-covid19-smithj\nAlso, check if you have access to CLIMB from this machine and are in the UK\n\n"))
-        sys.exit(-1)
-
-def get_remote_data(uun,data_dir,config):
-    config["remote"]= True
-    if uun:
-        config["username"] = uun
-        rsync_data_from_climb(uun, data_dir)
-    elif "username" in config:
-        uun = config["username"]
-        rsync_data_from_climb(uun, data_dir)
-    else:
-        rsync_command = f"rsync -avzh bham.covid19.climb.ac.uk:/cephfs/covid/bham/civet-cat '{data_dir}'"
-        print(f"Syncing civet data to {data_dir}")
-        status = os.system(rsync_command)
-        if status != 0:
-            sys.stderr.write(cyan("Error: rsync command failed.\nCheck your ssh is configured with Host bham.covid19.climb.ac.uk\nAlternatively enter your CLIMB username with -uun e.g. climb-covid19-smithj\nAlso, check if you have access to CLIMB from this machine and check if you are in the UK\n\n"))
-            sys.exit(-1)
-
-    cog_metadata,cog_global_metadata = ("","")
-    cog_seqs = ""
-    cog_tree = ""
-
-    cog_seqs = os.path.join(data_dir,"civet-cat","cog_alignment.fasta")
-    cog_metadata = os.path.join(data_dir,"civet-cat","cog_metadata.csv")
-
-    cog_global_metadata = os.path.join(data_dir,"civet-cat","cog_global_metadata.csv")
-    cog_global_seqs= os.path.join(data_dir,"civet-cat","cog_global_alignment.fasta")
-
-    cog_tree = os.path.join(data_dir,"civet-cat","cog_global_tree.nexus")
-
-    if not os.path.isfile(cog_seqs) or not os.path.isfile(cog_global_seqs) or not os.path.isfile(cog_metadata) or not os.path.isfile(cog_global_metadata) or not os.path.isfile(cog_tree):
-        print_data_error(data_dir)
-        sys.exit(-1)
-
-    config["cog_seqs"] = cog_seqs
-
-    config["cog_metadata"] = cog_metadata
-    config["cog_global_metadata"] = cog_global_metadata
-
-    config["cog_global_seqs"] = cog_global_seqs
-    config["cog_tree"] = cog_tree
-
-    print("Found cog data:")
-    print("    -",cog_seqs)
-    print("    -",cog_metadata)
-    print("    -",cog_global_metadata)
-    print("    -",cog_tree,"\n")
-
-def get_datadir(args_climb,args_uun,args_datadir,remote,cwd,config,default_dict):
-    data_dir = ""
-    if args_climb:
-        data_dir = "/cephfs/covid/bham/civet-cat"
-        if os.path.exists(data_dir):
-            config["remote"] = False
-            config["username"] = ""
-        else:
-            sys.stderr.write(cyan(f"Error: --CLIMB argument called, but CLIMB data path doesn't exist.\n"))
-            sys.exit(-1)
-
-    elif args_datadir:
-        data_dir = os.path.join(cwd, args_datadir)
-
-    elif "datadir" in config:
-        data_dir = os.path.join(cwd, args_datadir)
-
-    else:
-        data_dir = default_dict["datadir"]
-
-    if not remote:
-        if not os.path.exists(data_dir):
-            print_data_error()
-            sys.exit(-1)
-            
-        cog_metadata,cog_global_metadata = ("","")
-        cog_seqs = ""
-        cog_tree = ""
-        
-        cog_seqs = os.path.join(data_dir,"cog_alignment.fasta")
-        cog_metadata = os.path.join(data_dir,"cog_metadata.csv")
-
-        cog_global_metadata = os.path.join(data_dir,"cog_global_metadata.csv")
-        cog_global_seqs= os.path.join(data_dir,"cog_global_alignment.fasta")
-
-        cog_tree = os.path.join(data_dir,"cog_global_tree.nexus")
-
-        if not os.path.isfile(cog_seqs) or not os.path.isfile(cog_global_seqs) or not os.path.isfile(cog_metadata) or not os.path.isfile(cog_global_metadata) or not os.path.isfile(cog_tree):
-            print_data_error()
-            sys.exit(-1)
-        else:
-            config["cog_seqs"] = cog_seqs
-            config["cog_metadata"] = cog_metadata
-
-            config["cog_global_metadata"] = cog_global_metadata
-            config["cog_global_seqs"] = cog_global_seqs
-            config["cog_tree"] = cog_tree
-
-            print("Found cog data:")
-            print("    -",cog_seqs)
-            print("    -",cog_metadata)
-            print("    -",cog_global_metadata)
-            print("    -",cog_tree,"\n")
-
-    elif remote:
-        get_remote_data(args_uun, data_dir, config)
-
-    config["datadir"]=data_dir
     
 def get_dict_of_metadata_filters(to_parse, metadata):
     column_names =""
@@ -872,6 +681,7 @@ def generate_query_from_metadata(from_metadata, metadata, config):
 
     data_column = config["data_column"]
     config["input_column"] = data_column
+    print(data_column)
     
     # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
     query_dict,column_names = get_dict_of_metadata_filters(to_parse, metadata)
@@ -883,17 +693,15 @@ def generate_query_from_metadata(from_metadata, metadata, config):
     for column_name in query_dict:
         
         to_search = query_dict[column_name].upper()
-        print(to_search)
+
         # assumes its a date range if it has a ':' and startswith 2020-, 2019- or 2021-
         if ':' in to_search:
             if to_search.startswith("2020-") or to_search.startswith("2019-") or to_search.startswith("2021-"):
                 print(f"Date range detected: {to_search}")
                 rows_to_search = parse_date_range(metadata,column_name,to_search,rows_to_search)
-                print("date",len(rows_to_search))
         else:
             # parse by exact match 
             rows_to_search = parse_general_field(metadata,column_name,to_search,rows_to_search)
-            print("general",len(rows_to_search))
 
     query = os.path.join(config["outdir"], "from_metadata_query.csv")
 
@@ -944,9 +752,9 @@ def get_sequencing_centre_header(sequencing_centre_arg,config):
 
 def distance_config(distance,up_distance,down_distance,config,default_dict):
 
-    distance = check_arg_config_default(distance, "distance",config, default_dict)
-    down_distance = check_arg_config_default(down_distance, "down_distance",config, default_dict)
-    up_distance = check_arg_config_default(up_distance, "up_distance",config, default_dict)
+    distance = check_arg_config_default("distance",distance, config, default_dict)
+    down_distance = check_arg_config_default("down_distance",down_distance, config, default_dict)
+    up_distance = check_arg_config_default("up_distance",up_distance, config, default_dict)
 
     config["distance"] = distance
     config["down_distance"] = down_distance
