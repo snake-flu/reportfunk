@@ -1,51 +1,51 @@
 
 import csv
 
-def prepping_arguments(name_stem_input, tree_fields_input, graphic_dict_input, label_fields_input, date_fields_input, table_fields_input):
+def prepping_civet_arguments(name_stem_input, tree_fields_input, graphic_dict_input, label_fields_input, date_fields_input, table_fields_input):
+
+    tree_fields = prep_argument_list(tree_fields_input, "NONE")
+    label_fields = prep_argument_list(label_fields_input, "NONE")
+    date_fields = prep_argument_list(date_fields_input, "NONE")
+    table_fields = prep_argument_list(table_fields_input, "NONE")
 
     if "/" in name_stem_input:
         name_stem = name_stem_input.split("/")[-1]
     else:
         name_stem = name_stem_input
 
-    tree_fields = []
-    options = tree_fields_input.split(",")
-    for i in options: 
-        tree_fields.append(i)
-
-    #if type(graphic_dict_input) != dict:
     graphic_dict = {}
     splits = graphic_dict_input.split(",")
     for element in splits:
         key = element.split(":")[0]
         value = element.split(":")[1]
         graphic_dict[key] = value
-    # else:
-    #     graphic_dict = graphic_dict_input
             
     for key in graphic_dict.keys():
         if key not in tree_fields:
             tree_fields.append(key)
-
-    label_fields= []
-    if label_fields_input != "NONE":
-        options = label_fields_input.split(",")
-        for i in options: 
-            label_fields.append(i)
-
-    date_fields = []
-    if date_fields_input != "NONE":
-        options = date_fields_input.split(",")
-        for i in options: 
-            date_fields.append(i)
-
-    table_fields = []
-    options = table_fields_input.split(",")
-    for i in options: 
-        table_fields.append(i)
-
-
+  
     return name_stem, tree_fields, graphic_dict, label_fields, date_fields, table_fields
+
+def prepping_llama_arguments(colour_fields_input, label_fields_input, name_stem_input):
+    
+    label_fields = prep_argument_list(label_fields_input, "NONE")
+    colour_fields = prep_argument_list(colour_fields_input, "NONE")
+
+    if "/" in name_stem_input:
+        name_stem = name_stem_input.split("/")[-1]
+    else:
+        name_stem = name_stem_input
+
+    return label_fields, colour_fields, name_stem
+
+
+def prep_argument_list(list_input, absence):
+    lst = []
+    if list_input != absence:
+        options = list_input.split(",")
+        for i in options: 
+            lst.append(i)
+    return lst
 
 
 

@@ -500,8 +500,8 @@ def check_date_format(date_string):
 def local_lineages_config(local_lineages, config,default_dict):
 
     query_file = config["query"]
-
-    
+    if config["local_lineages"]:
+        pass
     elif local_lineages:
         config['local_lineages'] = True
     elif "local_lineages" in config:
@@ -509,7 +509,7 @@ def local_lineages_config(local_lineages, config,default_dict):
     else:
         config["local_lineages"] = default_dict["local_lineages"]
 
-    if config["local_lineages"]:
+  
         #now made it so that it can take adm2 from the combined metadata 
         # with open(query_file, newline="") as f:
         #     reader = csv.DictReader(f)
@@ -518,19 +518,19 @@ def local_lineages_config(local_lineages, config,default_dict):
         #         sys.stderr.write(cyan(f"Error: --local-lineages argument called, but input csv file doesn't have an adm2 column. Please provide that to have local lineage analysis.\n"))
         #         sys.exit(-1)
 
-        if config["date_restriction"]:
-        ## does this need to check if it also is in the default dict or in an arg?
-            if config["date_range_start"] and type(config["date_range_start"]) == str:
-                check_date_format(config["date_range_start"])
-            if config["date_range_end"] and type(config["date_range_end"]) == str:
-                check_date_format(config["date_range_end"])
+    if config["date_restriction"]:
+    ## does this need to check if it also is in the default dict or in an arg?
+        if config["date_range_start"] and type(config["date_range_start"]) == str:
+            check_date_format(config["date_range_start"])
+        if config["date_range_end"] and type(config["date_range_end"]) == str:
+            check_date_format(config["date_range_end"])
 
-            if config["date_range_start"] and config["date_range_end"]:
-                print(green(f"Local lineage analysis restricted to {config['date_range_start']} to {config['date_range_end']}"))
-            elif config["date_range_start"]:
-                print(green(f"Local lineage analysis restricted to {config['date_range_start']} to present"))
-            else:
-                print(green(f"Local lineage analysis restricted to {config['date_window']} days around the sampling range"))
+        if config["date_range_start"] and config["date_range_end"]:
+            print(green(f"Local lineage analysis restricted to {config['date_range_start']} to {config['date_range_end']}"))
+        elif config["date_range_start"]:
+            print(green(f"Local lineage analysis restricted to {config['date_range_start']} to present"))
+        else:
+            print(green(f"Local lineage analysis restricted to {config['date_window']} days around the sampling range"))
 
 def check_summary_fields(full_metadata, summary_field, config):
 
@@ -649,7 +649,7 @@ def get_package_data(cog_report,thisdir,config,default_dict):
 
     config["report_template"] = report_template
 
-def print_data_error():
+def print_data_error(data_dir):
     sys.stderr.write(cyan(f"Error: data directory not found at {data_dir}.\n")+ f"""The directory should contain the following files:\n\
     - cog_global_tree.nexus\n\
     - cog_metadata.csv\n\
@@ -697,7 +697,7 @@ def get_remote_data(uun,data_dir,config):
     cog_tree = os.path.join(data_dir,"civet-cat","cog_global_tree.nexus")
 
     if not os.path.isfile(cog_seqs) or not os.path.isfile(cog_global_seqs) or not os.path.isfile(cog_metadata) or not os.path.isfile(cog_global_metadata) or not os.path.isfile(cog_tree):
-        print_data_error()
+        print_data_error(data_dir)
         sys.exit(-1)
 
     config["cog_seqs"] = cog_seqs
