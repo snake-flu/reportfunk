@@ -159,7 +159,7 @@ def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     if no_temp_arg:
         print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
         tempdir = outdir
-    elif "no-temp" in config:
+    elif "no_temp" in config:
         print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
         tempdir = outdir
     elif tempdir_arg:
