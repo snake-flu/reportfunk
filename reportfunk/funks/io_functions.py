@@ -487,7 +487,7 @@ def local_lineages_config(local_lineages, config,default_dict):
     else:
         config["local_lineages"] = default_dict["local_lineages"]
 
-    if config["local_lineages"]:
+  
         #now made it so that it can take adm2 from the combined metadata 
         # with open(query_file, newline="") as f:
         #     reader = csv.DictReader(f)
@@ -496,19 +496,19 @@ def local_lineages_config(local_lineages, config,default_dict):
         #         sys.stderr.write(cyan(f"Error: --local-lineages argument called, but input csv file doesn't have an adm2 column. Please provide that to have local lineage analysis.\n"))
         #         sys.exit(-1)
 
-        if config["date_restriction"]:
-        ## does this need to check if it also is in the default dict or in an arg?
-            if config["date_range_start"] and type(config["date_range_start"]) == str:
-                check_date_format(config["date_range_start"])
-            if config["date_range_end"] and type(config["date_range_end"]) == str:
-                check_date_format(config["date_range_end"])
+    if config["date_restriction"]:
+    ## does this need to check if it also is in the default dict or in an arg?
+        if config["date_range_start"] and type(config["date_range_start"]) == str:
+            check_date_format(config["date_range_start"])
+        if config["date_range_end"] and type(config["date_range_end"]) == str:
+            check_date_format(config["date_range_end"])
 
-            if config["date_range_start"] and config["date_range_end"]:
-                print(green(f"Local lineage analysis restricted to {config['date_range_start']} to {config['date_range_end']}"))
-            elif config["date_range_start"]:
-                print(green(f"Local lineage analysis restricted to {config['date_range_start']} to present"))
-            else:
-                print(green(f"Local lineage analysis restricted to {config['date_window']} days around the sampling range"))
+        if config["date_range_start"] and config["date_range_end"]:
+            print(green(f"Local lineage analysis restricted to {config['date_range_start']} to {config['date_range_end']}"))
+        elif config["date_range_start"]:
+            print(green(f"Local lineage analysis restricted to {config['date_range_start']} to present"))
+        else:
+            print(green(f"Local lineage analysis restricted to {config['date_window']} days around the sampling range"))
 
 def check_summary_fields(full_metadata, summary_field, config):
 
