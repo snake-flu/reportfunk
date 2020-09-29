@@ -374,8 +374,6 @@ def node_summary(node_summary,config):
 def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, display_name_arg, config, default_dict):
     #we'll have to restructure this a bit so that the defaults can be specified - at the moment, they're all civet defaults
 
-    print(config)
-
     acceptable_colours = get_colours()
     queries = []
     
@@ -416,7 +414,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     labels_str = check_args_and_config_list("label_fields", label_fields, column_names, config, default_dict)
 
     date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
-    check_date_columns(config["query"], config["cog_global_metadata"], date_field_str.split(",")) #the metadata is civet metadata
+    check_date_columns(config["query"], config["cog_global_metadata"], date_field_str.split(",")) #the metadata is civet metadata - will change this
     
     graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")

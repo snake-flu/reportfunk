@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 from reportfunk.funks.class_definitions import taxon,lineage
 
 def convert_date(date_string):
-    
     try:
         bits = date_string.split("-")
         date_dt = dt.date(int(bits[0]),int(bits[1]), int(bits[2]))
@@ -47,52 +46,46 @@ def parse_tree_tips(tree_dir):
 
 ###MAYBE MAKE UK SPECIFIC METADATA FUNCTIONS, AND THEN GLOBAL ONES - or have UK=False or corona=False as defaults that we can set to true for civet?
 
-def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields):
+def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields, virus="sars-cov-2"):
     
     query_dict = {}
     query_id_dict = {}
 
     tree_to_tip = defaultdict(list)
 
-    uk_contract_dict = {"SCT":"Scotland", "WLS": "Wales", "ENG":"England", "NIR": "Northern_Ireland"}
-
-
     with open(metadata_file, "r") as f:
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
         for sequence in in_data:
             
-            #can't assume adm1 is the country column? or maybe can in this function
-            if "UK" in sequence["adm1"]:
-                adm1_prep = sequence["adm1"].split("-")[1]
-                adm1 = uk_contract_dict[adm1_prep]
-            else:
-                adm1 = sequence["adm1"]
-            
-            #all this specific stuff I think is only for the civet table, so maybe we make a new function for civet and then some general ones for date/tree/label fields?
-            #maybe it's only the uk lineage and phylotype that's actually specific here to civet, and sample_date would need to genearlised somehow
-            #glob_lin is specific to corona
-            glob_lin = sequence['lineage']
-            uk_lineage = sequence['uk_lineage']
+            country = sequence["country"]
             query_id = sequence['query_id']
             query_name = sequence['query']
             closest_name = sequence["closest"]
             closest_distance = sequence["closest_distance"]
             snps = sequence['snps']
+            sample_date = sequence["sample_date"] #this may need to be flexible if using a different background database
 
+
+            if sequence["country"] == "UK":
+                adm1 = UK_adm1(query_name, sequence["adm1"])
+
+            if virus == "sars-cov-2": #also uk_lineage and phylotype are UK specific, but it has it in llama so leave it for now
+                glob_lineage = sequence['lineage']
+                uk_lineage = sequence['uk_lineage']
+                phylotype = sequence["phylotype"]
                 
-            phylotype = sequence["phylotype"]
-            sample_date = sequence["sample_date"]
-            
-            new_taxon = taxon(query_name, glob_lin, uk_lineage, phylotype, label_fields, tree_fields, table_fields)
+                #do we want table fields in llama? probably yes
+                new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields, glob_lin=glob_lineage, uk_lin=uk_lineage, phylotype=phylotype)
+           
+            else:
+                new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields)
 
             new_taxon.query_id = query_id
 
-            #then this bit is only for civet - or just change it to "in_db"
-            if query_name == closest_name: #if it's in COG, get it's sample date
+            if query_name == closest_name: #if it's in database, get its sample date
                 new_taxon.in_db = True
                 new_taxon.sample_date = sample_date
-                #new_taxon.attribute_dict["adm1"] = adm1
                 new_taxon.closest = "NA"
 
             else:
@@ -100,15 +93,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
                 new_taxon.closest_distance = closest_distance
                 new_taxon.snps = snps
                 
-                if "adm1" in tree_fields:
-                    for k,v in uk_contract_dict.items():
-                        if k in query_name or v in query_name: #if any part of any country name is in the query name it will pick it up assign it
-                            new_taxon.attribute_dict["adm1"] = v
             
-            #this is civet specific - can't assume other programs are querying UK sequences
-            # maybe add if country in col names here   
-            new_taxon.country = "UK" 
-
             relevant_tree = tip_to_tree[query_name]
             new_taxon.tree = relevant_tree
 
@@ -119,10 +104,12 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             
     return query_dict, query_id_dict, tree_to_tip
 
-def Uk_adm1(input_value):
+def UK_adm1(query_name, input_value):
     
     contract_dict = {"SCT":"Scotland", "WLS": "Wales", "ENG":"England", "NIR": "Northern_Ireland"}
     cleaning = {"SCOTLAND":"Scotland", "WALES":"Wales", "ENGLAND":"England", "NORTHERN_IRELAND": "Northern_Ireland", "NORTHERN IRELAND": "Northern_Ireland"}
+
+    adm1 = input_value
 
     if "UK" in input_value:
         adm1_prep = input_value.split("-")[1]
@@ -131,11 +118,13 @@ def Uk_adm1(input_value):
         if input_value.upper() in cleaning.keys():
             adm1 = cleaning[input_value.upper()]
         else:
-            adm1 = input_value
+            for k,v in contract_dict.items():
+                if k in query_name or v in query_name: #if any part of any country name is in the query name it will pick it up assign it
+                    adm1 = v
 
     return adm1
 
-def parse_input_csv(input_csv, query_id_dict, input_column, display_name, tree_fields, label_fields, adm2_adm1_dict, table_fields, date_fields=None): 
+def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, UK_adm2_dict=None, date_fields=None, UK=False): 
     
     new_query_dict = {}
     
@@ -162,47 +151,43 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, tree_f
                             date_dt = convert_date(sequence[field])
                             taxon.date_dict[field] = date_dt 
 
-                #keep this separate to above, because sample date is specifically needed
-                if "sample_date" in col_names: #if it's not in database but date is provided (if it's in database, it will already have been assigned a sample date hopefully.)
-                    if sequence["sample_date"] != "":
-                        taxon.sample_date = sequence["sample_date"]
-                elif "collection_date" in col_names:
-                    if sequence["collection_date"] != "": #for the COG report 
-                        taxon.sample_date = sequence["collection_date"]
+                if sample_date_column in col_names: #if it's not in the background database or there is no date in the background database but date is provided in the input query
+                    if sequence[sample_date_column] != "":
+                        taxon.sample_date = sequence[sample_date_column]
 
                 for col in col_names: #Add other metadata fields provided
                     if col in table_fields:
                         if sequence[col] != "":
                             taxon.table_dict[col] = sequence[col]
-                    if col in label_fields:
+                    
+                    elif col in label_fields:
                         if sequence[col] != "":
                             taxon.attribute_dict[col] = sequence[col]
+                    
                     else:
-                        if col in tree_fields and col != "name" and col != "adm1":
+                        if col in tree_fields and col != input_column and col != "adm1":
                             if sequence[col] != "":
                                 taxon.attribute_dict[col] = sequence[col]
                         
-                        #uk specific stuff##########
-                        if col == "adm1":
-                            adm1 = Uk_adm1(sequence[col])
-                            taxon.attribute_dict["adm1"] = adm1
+                        if UK:
+                            if col == "adm1":
+                                adm1 = UK_adm1(sequence[col])
+                                taxon.attribute_dict["adm1"] = adm1
 
-                        if col == "adm2":
-                            taxon.attribute_dict["adm2"] = sequence["adm2"]
-
-                            if "adm1" not in col_names and "adm1" in tree_fields:
-                                if sequence[col] in adm2_adm1_dict.keys():
-                                    adm1 = adm2_adm1_dict[sequence[col]]
-                                    taxon.attribute_dict["adm1"] = adm1
-
-                        ########################
+                            if col == "adm2":
+                                taxon.attribute_dict["adm2"] = sequence["adm2"]
+                                if "adm1" not in col_names and "adm1" in tree_fields:
+                                    if sequence[col] in UK_adm2_dict.keys():
+                                        adm1 = UK_adm2_dict[sequence[col]]
+                                        taxon.attribute_dict["adm1"] = adm1
+                
 
                 new_query_dict[taxon.name] = taxon
 
       
     return new_query_dict 
 
-def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, full_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, date_fields=None):
+def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, full_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, date_fields=None, virus="sars-cov-2"):
 
     full_tax_dict = query_dict.copy()
 
@@ -216,21 +201,29 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, ful
         in_data = [r for r in reader]
         for sequence in in_data:
             
-            #these bits would need generalising to whatever database is the background to make it non-corona
-            uk_lin = sequence["uk_lineage"]
             seq_name = sequence[database_name_column]
 
-            date = sequence["sample_date"]
-            adm2 = sequence["adm2"]
+            date = sequence["sample_date"] #will need generalising for a different background database
             country = sequence["country"]
 
-            glob_lin = sequence["lineage"]
-            phylotype = sequence["phylotype"]
+            if "adm2" in col_names:
+                adm2 = sequence["adm2"]
+            else:
+                adm2 = ""
+
+            if virus == "sars-cov-2":
+                uk_lineage = sequence["uk_lineage"]
+                global_lineage = sequence["lineage"]
+                phylotype = sequence["phylotype"]
 
             node_summary_trait = sequence[node_summary_option]
 
             if seq_name in present_in_tree and seq_name not in query_dict.keys():
-                new_taxon = taxon(seq_name, glob_lin, uk_lin, phylotype, label_fields, tree_fields, table_fields)
+                if virus == "sars-cov-2":
+                    new_taxon = taxon(seq_name, label_fields, tree_fields, table_fields, global_lin=global_lineage, uk_lin = uk_lineage, phylotype=phylotype)
+                else:
+                    new_taxon = taxon(seq_name, label_fields, tree_fields, table_fields)
+                
                 if date == "":
                     date = "NA"
                 
@@ -274,7 +267,7 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, ful
                             if field != "adm1":
                                 tax_object.attribute_dict[field] = sequence[field]
                             else:
-                                adm1 = Uk_adm1(sequence[field])
+                                adm1 = UK_adm1(tax_object.query_name,sequence[field])
                                 tax_object.attribute_dict[field] = adm1
 
 
@@ -283,26 +276,24 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, ful
                         if tax_object.table_dict[field] == "NA" and sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
                                 tax_object.table_dict[field] = sequence[field]
 
-                    
-
 
                 full_tax_dict[seq_name] = tax_object
                     
     return full_tax_dict
     
 
-def parse_all_metadata(treedir, filtered_cog_metadata, full_metadata_file, input_csv, input_column, database_column, display_name, label_fields, tree_fields, table_fields, node_summary_option, adm2_to_adm1, date_fields=None):
+def parse_all_metadata(treedir, filtered_cog_metadata, full_metadata_file, input_csv, input_column, database_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict = None, virus="sars-cov-2", UK=False):
 
     present_in_tree, tip_to_tree = parse_tree_tips(treedir)
     
     #parse the metadata with just those queries found in cog
-    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_cog_metadata, tip_to_tree, label_fields, tree_fields, table_fields) 
+    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_cog_metadata, tip_to_tree, label_fields, tree_fields, table_fields, virus=virus) 
 
     #Any query information they have provided
-    query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, tree_fields, label_fields, adm2_to_adm1, table_fields, date_fields)
+    query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
     
     #parse the full background metadata
-    full_tax_dict = parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, full_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields)
+    full_tax_dict = parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, full_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields, virus=virus)
 
     return full_tax_dict, query_dict, tree_to_tip    
 
