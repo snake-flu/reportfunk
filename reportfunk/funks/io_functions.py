@@ -225,7 +225,7 @@ def check_args_and_config_list(config_key, argument, column_names,config,default
 
     input_to_check = check_arg_config_default(config_key,argument,config,default_dict)
 
-    full_metadata_headers = get_full_headers()
+    full_metadata_headers = config["background_metadata_header"]
 
     list_of_fields = []
     arg_list = []
@@ -253,7 +253,7 @@ def check_metadata_for_seach_columns(config,default_dict):
 
     data_column = config["data_column"]
     
-    with open(config["metadata"],"r") as f:
+    with open(config["background_metadata"],"r") as f:
         reader = csv.DictReader(f)
         header = reader.fieldnames
         if data_column not in header:
@@ -340,7 +340,7 @@ def node_summary(node_summary,config):
     print(green(f"Summarise collapsed nodes by:") + f" {summary}")
     config["node_summary"] = summary
 
-def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, display_name_arg, config, default_dict):
+def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_arg, date_fields, input_column, display_name_arg, config, default_dict):
     #we'll have to restructure this a bit so that the defaults can be specified - at the moment, they're all civet defaults
 
     acceptable_colours = get_colours()
@@ -385,7 +385,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
 
     date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
     
-    graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
+    graphic_dict_output = check_args_and_config_dict(colour_by_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["graphic_dict"] = graphic_dict_output
 
