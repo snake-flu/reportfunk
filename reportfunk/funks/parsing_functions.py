@@ -62,10 +62,10 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             query_id = sequence['query_id']
             query_name = sequence['query']
             closest_name = sequence["closest"]
-            closest_distance = sequence["closest_distance"]
-            snps = sequence['snps']
             sample_date = sequence["sample_date"] #this may need to be flexible if using a different background database
 
+            closest_distance = sequence["SNPdistance"]
+            snps = sequence['SNPs']
 
             if sequence["country"] == "UK":
                 adm1 = UK_adm1(query_name, sequence["adm1"])
