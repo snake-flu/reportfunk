@@ -115,7 +115,7 @@ def get_query_fasta(fasta_arg,cwd,config):
         fasta = os.path.join(cwd, fasta_arg)
 
     elif "fasta" in config:
-        fasta = os.path.join(config["path_to_query"], config["fasta"]) #do we want capability for having different paths to fasta? Or we could ask them to provide full path in config.
+        fasta = os.path.join(config["path_to_query"], config["fasta"]) 
 
     else:
         fasta = ""
@@ -249,22 +249,33 @@ def check_args_and_config_list(config_key, argument, column_names,config,default
     
     return field_str
 
-def check_metadata_for_seach_columns(data_column_arg,config,default_dict):
+def check_metadata_for_seach_columns(config,default_dict):
 
-    data_column = check_arg_config_default("data_column",data_column_arg,config,default_dict)
+    data_column = config["data_column"]
     
-    with open(config["cog_metadata"],"r") as f:
+    with open(config["metadata"],"r") as f:
         reader = csv.DictReader(f)
         header = reader.fieldnames
         if data_column not in header:
             sys.stderr.write(cyan(f"{data_column} column not in metadata"))
             sys.exit(-1)
 
+    config["background_metadata_header"] = header
+    config["data_column"] = data_column
+
+def data_columns_to_config(args,config,default_dict):
+
+    ## input_column
+    input_column = check_arg_config_default("input_column",args.input_column, config, default_dict)
+    config["input_column"] = input_column
+
+    ## data_column
+    data_column = check_arg_config_default("data_column",args.data_column, config, default_dict)
     config["data_column"] = data_column
 
 def check_args_and_config_dict(argument, config_key, default_key, default_value,column_names, value_check, config):
 
-    full_metadata_headers = get_full_headers()
+    full_metadata_headers = config["background_metadata_header"]
 
     output = []
 
@@ -310,9 +321,7 @@ def check_args_and_config_dict(argument, config_key, default_key, default_value,
 
 
 def node_summary(node_summary,config):
-    with open(config["cog_global_metadata"], newline="") as f:
-        reader = csv.DictReader(f)
-        column_names = reader.fieldnames
+    column_names = config["background_metadata_header"]
 
     if not node_summary and "node_summary" not in config:
         summary = "country"
@@ -342,7 +351,8 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     graphics_output = []
     column_names = []
 
-    input_column = check_arg_config_default("input_column",input_column,config,default_dict) 
+    input_column = config["input_column"]
+    data_column= config["data_column"]
 
     display_name = check_arg_config_default("display_name",display_name_arg,config,default_dict) 
     if not display_name:
@@ -393,80 +403,6 @@ def check_table_fields(table_fields, snp_data, config, default_dict):
         config["snps_in_seq_table"] = False
     #otherwise it's just specified in the config
 
-def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config,default_dict):
-
-    map_settings = False
-    query_file = config["query"]
-    full_metadata_headers = get_full_headers()
-
-    if map_sequences:
-        map_settings = True
-        
-    elif "map_sequences" in config:
-        map_settings = config["map_sequences"]
-    
-    else:
-        map_settings = default_dict["map_sequences"]
-
-    if map_settings:
-        if "map_cols" in config:
-            map_inputs = config["map_cols"].replace(" ","")
-
-        if "mapping_trait" in config:
-            mapping_trait = config["mapping_trait"]
-
-        if not map_inputs:
-            sys.stderr.write(cyan('Error: coordinates or outer postcode not supplied for mapping sequences. Please provide either x and y columns as a comma separated string, or column header containing outer postcode.'))
-            sys.exit(-1)
-        else:
-            if len(map_inputs.split(",")) == 2: #If x and y coordinates are provided
-                if input_crs:
-                    crs = input_crs
-                elif "input_crs" in config:
-                    crs = config["input_crs"]
-                else:
-                    sys.stderr.write('Error: input coordinate system not provided for mapping. Please provide --input-crs eg EPSG:3395')
-                    sys.exit(-1)
-            else: #If an outer postcode column is provided        
-                crs = "EPSG:4326"
-                            
-            config["map_cols"] = map_inputs.replace(" ","")
-            config["input_crs"] = crs
-
-        with open(query_file, newline="") as f:
-            reader = csv.DictReader(f)
-            column_names = reader.fieldnames
-            relevant_cols = []
-            map_inputs_lst = map_inputs.split(",")
-            for i in map_inputs_lst:
-                relevant_cols.append(i)
-            
-            if mapping_trait:
-                relevant_cols.append(mapping_trait)
-            
-            for map_arg in relevant_cols:
-                map_arg = map_arg.replace(" ","")
-                if map_arg not in column_names and map_arg not in full_metadata_headers:
-                    sys.stderr.write(cyan(f"Error: {map_arg} field not found in metadata file or background database for mapping sequences"))
-                    sys.exit(-1)
-
-        if mapping_trait:
-            if map_inputs == "adm2":
-                print(cyan(f"NOTE: mapping trait provided, but summary map is not designed for showing trait. Please provide more detailed mapping information, eg outer postcode or coordinates"))
-            else:
-                print(green(f"Colouring map by: " + f"{mapping_trait}"))
-            config["mapping_trait"] = mapping_trait
-            
-        else:
-            config["mapping_trait"] = False
-            
-    else:
-        config["map_sequences"] = False
-        config["map_cols"] = False
-        config["input_crs"] = False
-        config["mapping_trait"] = False
-
-
 def check_date_format(date_string):
 
     date_format = '%Y-%m-%d'
@@ -476,57 +412,21 @@ def check_date_format(date_string):
         sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
         sys.exit(-1)
 
-def local_lineages_config(local_lineages, config,default_dict):
+def check_summary_fields(summary_field, config):
 
-    query_file = config["query"]
+    column_names = config["background_metadata_header"]
 
-    if local_lineages:
-        config['local_lineages'] = True
-    elif "local_lineages" in config:
-        pass
+    if not summary_field:
+        summary = "lineage"
     else:
-        config["local_lineages"] = default_dict["local_lineages"]
-
-  
-        #now made it so that it can take adm2 from the combined metadata 
-        # with open(query_file, newline="") as f:
-        #     reader = csv.DictReader(f)
-        #     header = reader.fieldnames
-        #     if not "adm2" in header:
-        #         sys.stderr.write(cyan(f"Error: --local-lineages argument called, but input csv file doesn't have an adm2 column. Please provide that to have local lineage analysis.\n"))
-        #         sys.exit(-1)
-
-    if config["date_restriction"]:
-    ## does this need to check if it also is in the default dict or in an arg?
-        if config["date_range_start"] and type(config["date_range_start"]) == str:
-            check_date_format(config["date_range_start"])
-        if config["date_range_end"] and type(config["date_range_end"]) == str:
-            check_date_format(config["date_range_end"])
-
-        if config["date_range_start"] and config["date_range_end"]:
-            print(green(f"Local lineage analysis restricted to {config['date_range_start']} to {config['date_range_end']}"))
-        elif config["date_range_start"]:
-            print(green(f"Local lineage analysis restricted to {config['date_range_start']} to present"))
+        if summary_field in column_names:
+            summary = summary_field
         else:
-            print(green(f"Local lineage analysis restricted to {config['date_window']} days around the sampling range"))
-
-def check_summary_fields(full_metadata, summary_field, config):
-
-    with open(full_metadata, newline="") as f:
-        reader = csv.DictReader(f)
-        column_names = reader.fieldnames
-
-        if not summary_field:
-            summary = "lineage"
-        else:
-            if summary_field in column_names:
-                summary = summary_field
-            else:
-                sys.stderr.write(cyan(f"Error: {summary_field} field not found in metadata file\n"))
-                sys.exit(-1)
+            sys.stderr.write(cyan(f"Error: {summary_field} field not found in metadata file\n"))
+            sys.exit(-1)
         
-        print(green(f"Going to summarise collapsed nodes by: ") + f"{summary}")
-        config["node_summary"] = summary
+    print(green(f"Going to summarise collapsed nodes by: ") + f"{summary}")
+    config["node_summary"] = summary
 
 def check_arg_config_default(key,arg,config,default):
     new_str = ""
@@ -681,7 +581,6 @@ def generate_query_from_metadata(from_metadata, metadata, config):
 
     data_column = config["data_column"]
     config["input_column"] = data_column
-    print(data_column)
     
     # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
     query_dict,column_names = get_dict_of_metadata_filters(to_parse, metadata)
@@ -725,31 +624,6 @@ def generate_query_from_metadata(from_metadata, metadata, config):
                 print(f" - {i}")
     return query
 
-def get_sequencing_centre_header(sequencing_centre_arg,config):
-    
-    sc_list = ["PHEC", 'LIVE', 'BIRM', 'PHWC', 'CAMB', 'NORW', 'GLAS', 'EDIN', 'SHEF',
-                'EXET', 'NOTT', 'PORT', 'OXON', 'NORT', 'NIRE', 'GSTT', 'LOND', 'SANG',"NIRE"]
-
-    if sequencing_centre_arg:
-        sequencing_centre = sequencing_centre_arg
-    elif "sequencing_centre" in config:
-        sequencing_centre = config["sequencing_centre"]
-    else:
-        sequencing_centre = "DEFAULT"
-
-    if sequencing_centre in sc_list or sequencing_centre == "DEFAULT":
-        package_png = os.path.join("data","headers",f"{sequencing_centre}.png")
-        sequencing_centre_source = pkg_resources.resource_filename('civet', package_png)
-        print(green(f"Using header file from:") + f" {package_png}\n")
-        config["sequencing_centre_source"] = sequencing_centre_source
-        config["sequencing_centre_dest"] = os.path.join(config["outdir"],"figures",f"{sequencing_centre}.png")
-        config["sequencing_centre_file"] = os.path.join(".","figures",f"{sequencing_centre}.png")
-        config["sequencing_centre"] = sequencing_centre
-    else:
-        sc_string = "\n".join(sc_list)
-        sys.stderr.write(cyan(f'Error: sequencing centre must be one of the following:\n{sc_string}\n'))
-        sys.exit(-1)
-
 def distance_config(distance,up_distance,down_distance,config,default_dict):
 
     distance = check_arg_config_default("distance",distance, config, default_dict)
@@ -781,13 +655,6 @@ def get_colours():
             'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar']
     return colours
 
-def get_full_headers():
-    #could open and parse the cog metadata here to make it flexible
-    headers = ["central_sample_id", "biosample_source_id","sequence_name","secondary_identifier",
-                "sample_date","epi_week","country","adm1","adm2","outer_postcode","is_surveillance","is_community",
-                "is_hcw","is_travel_history","travel_history","lineage","lineage_support","uk_lineage","acc_lineage","del_lineage","phylotype"]
-
-    return headers
 
 def colour(text, text_colour):
     bold_text = 'bold' in text_colour
