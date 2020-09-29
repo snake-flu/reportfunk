@@ -13,8 +13,12 @@ import matplotlib.pyplot as plt
 from reportfunk.funks.class_definitions import taxon,lineage
 
 def convert_date(date_string):
-    bits = date_string.split("-")
-    date_dt = dt.date(int(bits[0]),int(bits[1]), int(bits[2]))
+    
+    try:
+        bits = date_string.split("-")
+        date_dt = dt.date(int(bits[0]),int(bits[1]), int(bits[2]))
+    except ValueError:
+        print("The wrong date format was supplied. Please re-run with YYYY-MM-DD")
     
     return date_dt
 

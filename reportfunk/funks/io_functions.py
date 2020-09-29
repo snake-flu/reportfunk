@@ -249,6 +249,46 @@ def check_args_and_config_list(config_key, argument, column_names,config,default
     
     return field_str
 
+def check_date_format(date_string, date_col=None):
+
+    date_format = '%Y-%m-%d'
+    try:
+        date_obj = datetime.strptime(date_string, date_format)
+    except ValueError:
+        if date_col:
+            sys.stderr.write(cyan(f"Incorrect data format in {date_col}, should be YYYY-MM-DD"))
+            sys.exit(-1)
+        else:
+            sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
+            sys.exit(-1)
+
+def check_date_columns(query, metadata, date_column_list):
+
+    with open(query) as f:
+        reader = csv.DictReader(f)
+        query_header = reader.fieldnames
+
+    with open(metadata) as f:
+        reader = csv.DictReader(f)
+        metadata_header = reader.fieldnames
+    
+    with open(query) as f:
+        reader = csv.DictReader(f)
+        data = [r for r in reader]
+        for col in date_column_list:
+            if col in query_header:
+                for line in data:
+                    check_date_format(line[col], col)
+
+    with open(metadata) as f:
+        reader = csv.DictReader(f)
+        data = [r for r in reader]
+        for col in date_column_list:
+            if col in query_header:
+                for line in data:
+                    check_date_format(line[col], col)
+
+
 def check_metadata_for_seach_columns(data_column_arg,config,default_dict):
 
     data_column = check_arg_config_default("data_column",data_column_arg,config,default_dict)
@@ -334,6 +374,8 @@ def node_summary(node_summary,config):
 def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg, date_fields, input_column, display_name_arg, config, default_dict):
     #we'll have to restructure this a bit so that the defaults can be specified - at the moment, they're all civet defaults
 
+    print(config)
+
     acceptable_colours = get_colours()
     queries = []
     
@@ -374,6 +416,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, display_arg,
     labels_str = check_args_and_config_list("label_fields", label_fields, column_names, config, default_dict)
 
     date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
+    check_date_columns(config["query"], config["cog_global_metadata"], date_field_str.split(",")) #the metadata is civet metadata
     
     graphic_dict_output = check_args_and_config_dict(display_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
@@ -466,15 +509,6 @@ def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config
         config["input_crs"] = False
         config["mapping_trait"] = False
 
-
-def check_date_format(date_string):
-
-    date_format = '%Y-%m-%d'
-    try:
-        date_obj = datetime.strptime(date_string, date_format)
-    except ValueError:
-        sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
-        sys.exit(-1)
 
 def local_lineages_config(local_lineages, config,default_dict):
 
