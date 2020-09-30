@@ -30,6 +30,8 @@ def make_config_file(config_name, config):
         print(green(f"Config file written to {config_out}."))
         sys.exit()
 
+
+
 def type_input_file(input_arg,cwd,config):
 
     query,configfile="",""
@@ -37,8 +39,7 @@ def type_input_file(input_arg,cwd,config):
         if "," in input_arg or "." not in input_arg:
             id_list = input_arg.split(",")
             print(green(f"ID string detected"))
-            query = make_csv_from_ids(id_list, config)
-            config["path_to_query"] = config["outdir"]
+            config["ids"] = id_list
         else:
             input_file = os.path.join(cwd,input_arg)
             path_to_file = os.path.abspath(os.path.dirname(input_file))
@@ -98,6 +99,8 @@ def check_query_file(query, cwd, config):
         else:
             id_list = config["ids"].split(",")
             queryfile = make_csv_from_ids(id_list, config)
+
+        config["path_to_query"] = config["outdir"]
     else:
         sys.stderr.write(cyan(f"Error: no query input provided\nPlease specify query or from_metadata\n"))
         sys.exit(-1)
@@ -139,12 +142,14 @@ def get_outdir(outdir_arg,cwd,config):
     outdir = ''
     
     if outdir_arg:
-        rel_outdir = outdir_arg #for report weaving
-        outdir = os.path.join(cwd, outdir_arg)
+        expanded_path = os.path.expanduser(outdir_arg)
+        outdir = os.path.join(cwd,expanded_path)
+        rel_outdir = os.path.relpath(outdir, cwd) 
 
     elif "outdir" in config:
-        rel_outdir = config["outdir"]
-        outdir = os.path.join(cwd, rel_outdir)
+        expanded_path = os.path.expanduser(config["outdir"])
+        outdir = os.path.join(config["path_to_query"],expanded_path)
+        rel_outdir = os.path.relpath(outdir, cwd) 
 
     else:
         timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
@@ -157,7 +162,7 @@ def get_outdir(outdir_arg,cwd,config):
 
     print(green(f"Output dir:") + f" {outdir}")
     config["outdir"] = outdir 
-    config["rel_outdir"] = rel_outdir 
+    config["rel_outdir"] = os.path.join(".",rel_outdir) 
         
 def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     tempdir = ''
