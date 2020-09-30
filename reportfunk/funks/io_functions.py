@@ -487,8 +487,11 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
     qc_fail = ""
     fasta = config["fasta"]
 
-    minlen = check_arg_config_default("minlen",minlen_arg,config,default_dict)
-    maxambig = check_arg_config_default("maxambig",maxambig_arg,config,default_dict)
+    minlen = check_arg_config_default("min_length",minlen_arg,config,default_dict)
+    maxambig = check_arg_config_default("max_ambiguity",maxambig_arg,config,default_dict)
+    
+    config["min_length"] = minlen
+    config["max_ambiguity"] = maxambig
 
     if fasta != "":
         do_not_run = []
