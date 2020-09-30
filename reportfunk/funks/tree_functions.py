@@ -74,7 +74,7 @@ def display_name(tree, tree_name, tree_dir, full_taxon_dict, query_dict, private
                         k.traits["display"] = f"{display_name_element}|{adm2}|{date}"
 
                     count = 0
-                    if len(custom_tip_fields) > 0: 
+                    if len(custom_tip_fields) > 0: #need to check this is right
                         if name in query_dict.keys(): 
                             for label_element in custom_tip_fields:
                                 if count == 0:

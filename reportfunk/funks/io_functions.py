@@ -249,7 +249,51 @@ def check_args_and_config_list(config_key, argument, column_names,config,default
     
     return field_str
 
+<<<<<<< HEAD
+def check_date_format(date_string, date_col=None):
+
+    date_format = '%Y-%m-%d'
+    try:
+        date_obj = datetime.strptime(date_string, date_format)
+    except ValueError:
+        if date_col:
+            sys.stderr.write(cyan(f"Incorrect data format in {date_col}, should be YYYY-MM-DD"))
+            sys.exit(-1)
+        else:
+            sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
+            sys.exit(-1)
+
+def check_date_columns(query, metadata, date_column_list):
+
+    with open(query) as f:
+        reader = csv.DictReader(f)
+        query_header = reader.fieldnames
+
+    with open(metadata) as f:
+        reader = csv.DictReader(f)
+        metadata_header = reader.fieldnames
+    
+    with open(query) as f:
+        reader = csv.DictReader(f)
+        data = [r for r in reader]
+        for col in date_column_list:
+            if col in query_header:
+                for line in data:
+                    check_date_format(line[col], col)
+
+    with open(metadata) as f:
+        reader = csv.DictReader(f)
+        data = [r for r in reader]
+        for col in date_column_list:
+            if col in query_header:
+                for line in data:
+                    check_date_format(line[col], col)
+
+
+def check_metadata_for_seach_columns(data_column_arg,config,default_dict):
+=======
 def check_metadata_for_seach_columns(config,default_dict):
+>>>>>>> 1a2c0e9e2cd5e0930b327a68aadeb274f31aabbb
 
     data_column = config["data_column"]
     
@@ -384,6 +428,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_ar
     labels_str = check_args_and_config_list("label_fields", label_fields, column_names, config, default_dict)
 
     date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
+    check_date_columns(config["query"], config["cog_global_metadata"], date_field_str.split(",")) #the metadata is civet metadata - will change this
     
     graphic_dict_output = check_args_and_config_dict(colour_by_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
@@ -403,6 +448,83 @@ def check_table_fields(table_fields, snp_data, config, default_dict):
         config["snps_in_seq_table"] = False
     #otherwise it's just specified in the config
 
+<<<<<<< HEAD
+def map_sequences_config(map_sequences,mapping_trait,map_inputs,input_crs,config,default_dict):
+
+    map_settings = False
+    query_file = config["query"]
+    full_metadata_headers = get_full_headers()
+
+    if map_sequences:
+        map_settings = True
+        
+    elif "map_sequences" in config:
+        map_settings = config["map_sequences"]
+    
+    else:
+        map_settings = default_dict["map_sequences"]
+
+    if map_settings:
+        if "map_cols" in config:
+            map_inputs = config["map_cols"].replace(" ","")
+
+        if "mapping_trait" in config:
+            mapping_trait = config["mapping_trait"]
+
+        if not map_inputs:
+            sys.stderr.write(cyan('Error: coordinates or outer postcode not supplied for mapping sequences. Please provide either x and y columns as a comma separated string, or column header containing outer postcode.'))
+            sys.exit(-1)
+        else:
+            if len(map_inputs.split(",")) == 2: #If x and y coordinates are provided
+                if input_crs:
+                    crs = input_crs
+                elif "input_crs" in config:
+                    crs = config["input_crs"]
+                else:
+                    sys.stderr.write('Error: input coordinate system not provided for mapping. Please provide --input-crs eg EPSG:3395')
+                    sys.exit(-1)
+            else: #If an outer postcode column is provided        
+                crs = "EPSG:4326"
+                            
+            config["map_cols"] = map_inputs.replace(" ","")
+            config["input_crs"] = crs
+
+        with open(query_file, newline="") as f:
+            reader = csv.DictReader(f)
+            column_names = reader.fieldnames
+            relevant_cols = []
+            map_inputs_lst = map_inputs.split(",")
+            for i in map_inputs_lst:
+                relevant_cols.append(i)
+            
+            if mapping_trait:
+                relevant_cols.append(mapping_trait)
+            
+            for map_arg in relevant_cols:
+                map_arg = map_arg.replace(" ","")
+                if map_arg not in column_names and map_arg not in full_metadata_headers:
+                    sys.stderr.write(cyan(f"Error: {map_arg} field not found in metadata file or background database for mapping sequences"))
+                    sys.exit(-1)
+
+        if mapping_trait:
+            if map_inputs == "adm2":
+                print(cyan(f"NOTE: mapping trait provided, but summary map is not designed for showing trait. Please provide more detailed mapping information, eg outer postcode or coordinates"))
+            else:
+                print(green(f"Colouring map by: " + f"{mapping_trait}"))
+            config["mapping_trait"] = mapping_trait
+            
+        else:
+            config["mapping_trait"] = False
+            
+    else:
+        config["map_sequences"] = False
+        config["map_cols"] = False
+        config["input_crs"] = False
+        config["mapping_trait"] = False
+
+
+def local_lineages_config(local_lineages, config,default_dict):
+=======
 def check_date_format(date_string):
 
     date_format = '%Y-%m-%d'
@@ -413,6 +535,7 @@ def check_date_format(date_string):
         sys.exit(-1)
 
 def check_summary_fields(summary_field, config):
+>>>>>>> 1a2c0e9e2cd5e0930b327a68aadeb274f31aabbb
 
     column_names = config["background_metadata_header"]
 
