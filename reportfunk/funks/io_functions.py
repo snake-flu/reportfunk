@@ -63,7 +63,8 @@ def type_input_file(input_arg,cwd,config):
 def make_csv_from_ids(id_list, config):
     query = os.path.join(config["outdir"], "query.csv")
     with open(query,"w") as fw:
-        in_col = config["input_column"]
+        in_col = "name"
+        config["input_column"] = in_col
         fw.write(f"{in_col}\n")
         c = 0
         for i in id_list:
