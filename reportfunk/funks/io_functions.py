@@ -250,27 +250,33 @@ def check_args_and_config_list(config_key, argument, column_names,config,default
 
     input_to_check = check_arg_config_default(config_key,argument,config,default_dict)
 
-    full_metadata_headers = config["background_metadata_header"]
+    background_headers = config["background_metadata_header"]
 
     list_of_fields = []
     arg_list = []
 
-    if not type(input_to_check) is list:
-        input_to_check = input_to_check.split(",")
-    
-    for field in input_to_check:
-        field = field.replace(" ","")
-        if field in column_names or field in full_metadata_headers:
-            list_of_fields.append(field)
-        else:
-            sys.stderr.write(cyan(f"Error: '{field}' column not found in query metadata file or background metadata file for {config_key}\n"))
-            sys.exit(-1)
+    if type(input_to_check) != bool:
 
-    field_str = ",".join(input_to_check)
+        if not type(input_to_check) is list:
+            input_to_check = input_to_check.split(",")
+        
+        for field in input_to_check:
+            field = field.replace(" ","")
+            if field in column_names or field in background_headers:
+                list_of_fields.append(field)
+            else:
+                sys.stderr.write(cyan(f"Error: '{field}' column not found in query metadata file or background metadata file for {config_key}\n"))
+                sys.exit(-1)
+
+        field_str = ",".join(input_to_check)
+
+
+        print(green(f"{config_key} shown:") + f" {field_str}")
+
+    else:
+        field_str = input_to_check
 
     config[config_key] = field_str
-
-    print(green(f"{config_key} shown:") + f" {field_str}")
     
     return field_str
 
@@ -309,13 +315,13 @@ def check_date_columns(query, metadata, date_column_list):
         reader = csv.DictReader(f)
         data = [r for r in reader]
         for col in date_column_list:
-            if col in query_header:
+            if col in metadata_header:
                 row_num = 0
                 for line in data:
                     row_num +=1
                     check_date_format(line[col],row_num, col)
 
-def check_metadata_for_seach_columns(config,default_dict):
+def check_metadata_for_search_columns(config,default_dict):
 
     data_column = config["data_column"]
     
@@ -341,7 +347,7 @@ def data_columns_to_config(args,config,default_dict):
 
 def check_args_and_config_dict(argument, config_key, default_key, default_value,column_names, value_check, config):
 
-    full_metadata_headers = config["background_metadata_header"]
+    background_metadata_headers = config["background_metadata_header"]
 
     output = []
 
@@ -350,7 +356,7 @@ def check_args_and_config_dict(argument, config_key, default_key, default_value,
         for item in sections:
             splits = item.split("=")
             key = splits[0].replace(" ","")
-            if key in column_names or key in full_metadata_headers:
+            if key in column_names or key in background_metadata_headers:
                 if len(splits) == 1:
                     output.append(key + ":" + default_value)
                 else:
@@ -372,7 +378,7 @@ def check_args_and_config_dict(argument, config_key, default_key, default_value,
                 sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
                 sys.stderr.write(cyan(f"Please use one of {value_check}"))
                 sys.exit(-1)
-            elif key not in column_names and key not in full_metadata_headers:
+            elif key not in column_names and key not in background_metadata_headers:
                 sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
                 sys.exit(-1)
             else:
@@ -407,7 +413,6 @@ def node_summary(node_summary,config):
     config["node_summary"] = summary
 
 def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_arg, date_fields, input_column, display_name_arg, config, default_dict,metadata):
-    #we'll have to restructure this a bit so that the defaults can be specified - at the moment, they're all civet defaults
 
     acceptable_colours = get_colours()
     queries = []
@@ -446,13 +451,21 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_ar
         print(green(f"Number of queries:") + f" {len(queries)}")
 
     tree_field_str = check_args_and_config_list("tree_fields", tree_fields, column_names, config, default_dict)
-        
+    
     labels_str = check_args_and_config_list("label_fields", label_fields, column_names, config, default_dict)
 
     date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
-    check_date_columns(config["query"], metadata, date_field_str.split(",")) #the metadata is civet metadata - will change this
+    if date_field_str:
+        check_date_columns(config["query"], metadata, date_field_str.split(",")) 
     
-    graphic_dict_output = check_args_and_config_dict(colour_by_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
+    graphic_dict_output = check_args_and_config_dict(colour_by_arg, "graphic_dict", default_dict["graphic_dict"], "default",column_names, acceptable_colours, config)
+
+    for i in graphic_dict_output.split(","):
+        element = i.split(":")[0]
+        if element not in tree_field_str.split(",") and element != "adm1":
+            sys.stderr.write(cyan(f"Error: Field {element} in graphic dictionary but not in tree fields. Please add to tree fields if you want to colour by it.\n"))
+            sys.exit(-1)
+
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["graphic_dict"] = graphic_dict_output
 

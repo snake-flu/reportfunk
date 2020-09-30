@@ -9,7 +9,7 @@ def convert_date(date_string):
 
 class taxon():
     #will need to change the args here to make data parsing general
-    def __init__(self, name, country, label_fields, tree_fields, table_fields,  global_lin=global_lin, uk_lin=uk_lin, phylotype=phylotype):
+    def __init__(self, name, country, label_fields, tree_fields, table_fields,  global_lineage=None, uk_lineage=None, phylotype=None):
 
         self.name = name
         self.display_name = name
@@ -21,15 +21,15 @@ class taxon():
         self.attribute_dict = {}
         #self.attribute_dict["adm1"] = "NA" this should just be in tree_fields now
         
-        if global_lin == "":
+        if global_lineage == "":
             self.global_lin = "NA"
         else:
-            self.global_lin = global_lin
+            self.global_lin = global_lineage
         
-        if uk_lin == "":
+        if uk_lineage == "":
             self.uk_lin = "NA"
         else:
-            self.uk_lin = uk_lin
+            self.uk_lin = uk_lineage
        
         if phylotype == "":
             self.phylotype = "NA"

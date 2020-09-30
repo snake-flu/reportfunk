@@ -44,8 +44,6 @@ def parse_tree_tips(tree_dir):
 
     return tips, tip_to_tree
 
-###MAYBE MAKE UK SPECIFIC METADATA FUNCTIONS, AND THEN GLOBAL ONES - or have UK=False or corona=False as defaults that we can set to true for civet?
-
 def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields, virus="sars-cov-2"):
     
     query_dict = {}
@@ -76,7 +74,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
                 phylotype = sequence["phylotype"]
                 
                 #do we want table fields in llama? probably yes
-                new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields, glob_lin=glob_lineage, uk_lin=uk_lineage, phylotype=phylotype)
+                new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields, global_lineage=glob_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
            
             else:
                 new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields)
@@ -124,7 +122,7 @@ def UK_adm1(query_name, input_value):
 
     return adm1
 
-def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, UK_adm2_dict=None, date_fields=None, UK=False): 
+def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None, UK=False): 
     
     new_query_dict = {}
     
@@ -187,16 +185,16 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
       
     return new_query_dict 
 
-def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, full_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, date_fields=None, virus="sars-cov-2"):
+def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, date_fields=None, virus="sars-cov-2"):
 
     full_tax_dict = query_dict.copy()
 
-    with open(full_metadata, 'r') as f:
+    with open(background_metadata, 'r') as f:
         reader = csv.DictReader(f)
         col_name_prep = next(reader)
         col_names = list(col_name_prep.keys())
 
-    with open(full_metadata, 'r') as f:
+    with open(background_metadata, 'r') as f:
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
         for sequence in in_data:
@@ -220,9 +218,9 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, ful
 
             if seq_name in present_in_tree and seq_name not in query_dict.keys():
                 if virus == "sars-cov-2":
-                    new_taxon = taxon(seq_name, label_fields, tree_fields, table_fields, global_lin=global_lineage, uk_lin = uk_lineage, phylotype=phylotype)
+                    new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields, global_lineage=global_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
                 else:
-                    new_taxon = taxon(seq_name, label_fields, tree_fields, table_fields)
+                    new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields)
                 
                 if date == "":
                     date = "NA"
@@ -267,7 +265,7 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, ful
                             if field != "adm1":
                                 tax_object.attribute_dict[field] = sequence[field]
                             else:
-                                adm1 = UK_adm1(tax_object.query_name,sequence[field])
+                                adm1 = UK_adm1(tax_object.name,sequence[field])
                                 tax_object.attribute_dict[field] = adm1
 
 
@@ -282,22 +280,22 @@ def parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, ful
     return full_tax_dict
     
 
-def parse_all_metadata(treedir, filtered_cog_metadata, full_metadata_file, input_csv, input_column, database_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict = None, virus="sars-cov-2", UK=False):
+def parse_all_metadata(treedir, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, virus="sars-cov-2", UK=False):
 
     present_in_tree, tip_to_tree = parse_tree_tips(treedir)
     
     #parse the metadata with just those queries found in cog
-    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_cog_metadata, tip_to_tree, label_fields, tree_fields, table_fields, virus=virus) 
+    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, virus=virus) 
 
     #Any query information they have provided
-    query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
+    query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
     
     #parse the full background metadata
-    full_tax_dict = parse_full_metadata(query_dict, label_fields, tree_fields, table_fields, full_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields, virus=virus)
+    full_tax_dict = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields, virus=virus)
 
     return full_tax_dict, query_dict, tree_to_tip    
 
-def investigate_QC_fails(QC_file, tax_dict):
+def investigate_QC_fails(QC_file):
 
     fail_dict = {}
 
@@ -305,7 +303,7 @@ def investigate_QC_fails(QC_file, tax_dict):
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
         for sequence in in_data:
-            name = tax_dict[sequence["name"]].display_name
+            name = sequence["name"]
             reason = sequence["reason_for_failure"]
 
             if "seq_len" in reason:
