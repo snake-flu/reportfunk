@@ -249,18 +249,16 @@ def check_args_and_config_list(config_key, argument, column_names,config,default
     
     return field_str
 
-def check_date_format(date_string, date_col=None):
-
+def check_date_format(date_string,row_number,column_name):
     date_format = '%Y-%m-%d'
+    check_date= ""
     try:
-        date_obj = datetime.strptime(date_string, date_format)
-    except ValueError:
-        if date_col:
-            sys.stderr.write(cyan(f"Incorrect data format in {date_col}, should be YYYY-MM-DD"))
-            sys.exit(-1)
-        else:
-            sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
-            sys.exit(-1)
+        check_date = datetime.strptime(date_string, date_format).date()
+    except:
+        sys.stderr.write(cyan(f"Error: Metadata field `{date_string}` [at column: {column_name}, row: {row_number}] contains unaccepted date format\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+        sys.exit(-1)
+    
+    return check_date
 
 def check_date_columns(query, metadata, date_column_list):
 
@@ -277,16 +275,20 @@ def check_date_columns(query, metadata, date_column_list):
         data = [r for r in reader]
         for col in date_column_list:
             if col in query_header:
+                row_num = 0
                 for line in data:
-                    check_date_format(line[col], col)
+                    row_num +=1
+                    check_date_format(line[col],row_num, col)
 
     with open(metadata) as f:
         reader = csv.DictReader(f)
         data = [r for r in reader]
         for col in date_column_list:
             if col in query_header:
+                row_num = 0
                 for line in data:
-                    check_date_format(line[col], col)
+                    row_num +=1
+                    check_date_format(line[col],row_num, col)
 
 def check_metadata_for_seach_columns(config,default_dict):
 
@@ -379,7 +381,7 @@ def node_summary(node_summary,config):
     print(green(f"Summarise collapsed nodes by:") + f" {summary}")
     config["node_summary"] = summary
 
-def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_arg, date_fields, input_column, display_name_arg, config, default_dict):
+def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_arg, date_fields, input_column, display_name_arg, config, default_dict,metadata):
     #we'll have to restructure this a bit so that the defaults can be specified - at the moment, they're all civet defaults
 
     acceptable_colours = get_colours()
@@ -423,7 +425,7 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_ar
     labels_str = check_args_and_config_list("label_fields", label_fields, column_names, config, default_dict)
 
     date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
-    check_date_columns(config["query"], config["metadata"], date_field_str.split(",")) #the metadata is civet metadata - will change this
+    check_date_columns(config["query"], metadata, date_field_str.split(",")) #the metadata is civet metadata - will change this
     
     graphic_dict_output = check_args_and_config_dict(colour_by_arg, "graphic_dict", default_dict["date_fields"], "default",column_names, acceptable_colours, config)
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
@@ -442,15 +444,6 @@ def check_table_fields(table_fields, snp_data, config, default_dict):
     elif not snp_data and "snps_in_seq_table" not in config:
         config["snps_in_seq_table"] = False
     #otherwise it's just specified in the config
-
-def check_date_format(date_string):
-
-    date_format = '%Y-%m-%d'
-    try:
-        date_obj = datetime.strptime(date_string, date_format)
-    except ValueError:
-        sys.stderr.write(cyan(f"Incorrect data format, should be YYYY-MM-DD"))
-        sys.exit(-1)
 
 def check_summary_fields(summary_field, config):
 
@@ -521,7 +514,6 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
     config["post_qc_query"] = post_qc_query
     config["qc_fail"] = qc_fail
 
-    
 def get_dict_of_metadata_filters(to_parse, metadata):
     column_names =""
     query_dict = {}
@@ -561,11 +553,9 @@ def parse_date_range(metadata,column_name,to_search,rows_to_search):
             for row in reader:
                 c +=1
                 row_date = row[column_name]
-                try:
-                    check_date = datetime.strptime(row_date, "%Y-%m-%d").date()
-                except:
-                    sys.stderr.write(cyan(f"Error: Metadata field `{row_date}` [at column: {column_name}, row: {c}] contains unaccepted date format\Please use format `2020-05-19`\n"))
-                    sys.exit(-1)
+                
+                check_date = check_date_format(row_date,c,column_name)
+
                 if start_date <= check_date <= end_date:
                     rows_to_search.append((row,c))
     else:
@@ -573,11 +563,9 @@ def parse_date_range(metadata,column_name,to_search,rows_to_search):
         new_rows_to_search = []
         for row,c in last_rows_to_search:
             row_date = row[column_name]
-            try:
-                check_date = datetime.strptime(row_date, "%Y-%m-%d").date()
-            except:
-                sys.stderr.write(cyan(f"Error: Metadata field `{row_date}` [at column: {column_name}, row: {c}] contains unaccepted date format\Please use format `YYYY-MM-DD`\n"))
-                sys.exit(-1)
+
+            check_date = check_date_format(row_date,c,column_name)
+
             if start_date <= check_date <= end_date:
                 new_rows_to_search.append((row,c))
 
