@@ -119,7 +119,7 @@ def check_query_for_input_column(config,default_dict):
         reader = csv.DictReader(f)
         header = reader.fieldnames
         if input_column not in header:
-            sys.stderr.write(cyan(f"{input_column} column not in query metadata"))
+            sys.stderr.write(cyan(f"{input_column} column not in query metadata\n"))
             sys.exit(-1)
 
     config["query_metadata_header"] = header
@@ -128,7 +128,7 @@ def check_query_for_input_column(config,default_dict):
 def get_snakefile(thisdir):
     snakefile = os.path.join(thisdir, 'scripts','Snakefile')
     if not os.path.exists(snakefile):
-        sys.stderr.write(cyan(f'Error: cannot find Snakefile at {snakefile}\n Check installation'))
+        sys.stderr.write(cyan(f'Error: cannot find Snakefile at {snakefile}\n Check installation\n'))
         sys.exit(-1)
     return snakefile
 
@@ -323,7 +323,7 @@ def check_metadata_for_seach_columns(config,default_dict):
         reader = csv.DictReader(f)
         header = reader.fieldnames
         if data_column not in header:
-            sys.stderr.write(cyan(f"{data_column} column not in metadata"))
+            sys.stderr.write(cyan(f"{data_column} column not in metadata\n"))
             sys.exit(-1)
 
     config["background_metadata_header"] = header
@@ -687,9 +687,29 @@ def distance_config(distance,up_distance,down_distance,config,default_dict):
     down_distance = check_arg_config_default("down_distance",down_distance, config, default_dict)
     up_distance = check_arg_config_default("up_distance",up_distance, config, default_dict)
 
+    try:
+        distance = int(distance)
+    except:
+        sys.stderr.write(cyan(f"Error: distance must be an integer\n"))
+        sys.exit(-1)
+
+    if down_distance:
+        try:
+            config["down_distance"] = int(down_distance)
+        except:
+            sys.stderr.write(cyan(f"Error: down_distance must be an integer\n"))
+            sys.exit(-1)
+    else:
+        config["down_distance"] = distance
+
+    if up_distance:
+        try:
+            config["up_distance"] = int(up_distance)
+        except:
+            sys.stderr.write(cyan(f"Error: up_distance must be an integer\n"))
+            sys.exit(-1)
+
     config["distance"] = distance
-    config["down_distance"] = down_distance
-    config["up_distance"] = up_distance
 
     print(green(f"Extraction radius:\n")+f"\tUp distance: {up_distance}\n\tDown distance: {down_distance}\n")
 
