@@ -34,7 +34,7 @@ def type_input_file(input_arg,cwd,config):
 
     query,configfile="",""
     if input_arg:
-        if "," in input_arg:
+        if "," in input_arg or "." not in input_arg:
             id_list = input_arg.split(",")
             print(green(f"ID string detected"))
             query = make_csv_from_ids(id_list, config)
@@ -92,15 +92,20 @@ def check_query_file(query, cwd, config):
 
     elif "query" in config:
         queryfile = os.path.join(config["path_to_query"],config["query"])
-
+    elif "ids" in config:
+        if type(config["ids"]) == list:
+            queryfile = make_csv_from_ids(config["ids"], config)
+        else:
+            id_list = config["ids"].split(",")
+            queryfile = make_csv_from_ids(id_list, config)
     else:
-        sys.stderr.write(cyan(f"Error: no query input provided"))
+        sys.stderr.write(cyan(f"Error: no query input provided\nPlease specify query or from_metadata\n"))
         sys.exit(-1)
 
     if os.path.exists(queryfile):
         config["query"] = queryfile
     else:
-        sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids (e.g. EPI12345,EPI23456), please use in conjunction with the `--id-string` flag or provide `ids` in the config file \n."))
+        sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids in config (e.g. EPI12345,EPI23456) please provide them under keyword `ids`\n."))
         sys.exit(-1)
 
 def get_snakefile(thisdir):
@@ -525,10 +530,10 @@ def get_dict_of_metadata_filters(to_parse, metadata):
         
         # get each of the factors for the query
         for factor in to_parse:
-
+            
             # eg country=Ireland 
             column_name,to_search = factor.split("=")
-
+            print(f"\t- {column_name}\t {to_search}")
             # if the factor is in the metadata file add to the query dict
             if column_name in column_names:
                 query_dict[column_name] = to_search
@@ -601,10 +606,11 @@ def parse_general_field(metadata,column_name,to_search,rows_to_search):
 
 def generate_query_from_metadata(from_metadata, metadata, config):
 
+    print(green("From metadata:"))
     to_parse = ""
     if from_metadata:
         to_parse = from_metadata
-        print(from_metadata)
+
     elif "from_metadata" in config:
         to_parse = config["from_metadata"]
 
