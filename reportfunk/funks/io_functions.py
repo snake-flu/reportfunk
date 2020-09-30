@@ -111,6 +111,20 @@ def check_query_file(query, cwd, config):
         sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids in config (e.g. EPI12345,EPI23456) please provide them under keyword `ids`\n."))
         sys.exit(-1)
 
+def check_query_for_input_column(config,default_dict):
+
+    input_column = config["input_column"]
+    
+    with open(config["query"],"r") as f:
+        reader = csv.DictReader(f)
+        header = reader.fieldnames
+        if input_column not in header:
+            sys.stderr.write(cyan(f"{input_column} column not in query metadata"))
+            sys.exit(-1)
+
+    config["query_metadata_header"] = header
+
+
 def get_snakefile(thisdir):
     snakefile = os.path.join(thisdir, 'scripts','Snakefile')
     if not os.path.exists(snakefile):
@@ -489,7 +503,7 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
 
     minlen = check_arg_config_default("min_length",minlen_arg,config,default_dict)
     maxambig = check_arg_config_default("max_ambiguity",maxambig_arg,config,default_dict)
-    
+
     config["min_length"] = minlen
     config["max_ambiguity"] = maxambig
 
