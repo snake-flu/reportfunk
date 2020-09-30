@@ -68,12 +68,12 @@ class ColorizingStreamHandler(_logging.StreamHandler):
                 self.stream.write(getattr(self, "terminator", "\n"))
                 self.flush()
             except BrokenPipeError as e:
-                raise e
+                pass
             except (KeyboardInterrupt, SystemExit):
                 # ignore any exceptions in these cases as any relevant messages have been printed before
                 pass
             except Exception as e:
-                self.handleError(record)
+                pass
 
     def decorate(self, record):
         message = record.message
@@ -302,26 +302,26 @@ class Logger:
         level = msg["level"]
         if level == "job_error":
             timestamp()
-            self.logger.error(indent("Error in {}:".format(msg["name"])))
-
-            if msg["log"]:
-                self.logger.error(
-                    indent(
-                        "    log: {} (check log file(s) for error message)".format(
-                            ", ".join(msg["log"])
-                        )
-                    )
-                )
-            if msg["conda_env"]:
-                self.logger.error(indent("    conda-env: {}".format(msg["conda_env"])))
-            if msg["shellcmd"]:
-                self.logger.error(
-                    indent(
-                        "Error: the following command exited with an error\n{}".format(
-                            msg["shellcmd"]
-                        )
-                    )
-                )
+            # self.logger.error(indent("Error in {}:".format(msg["name"])))
+            
+            # if msg["log"]:
+            #     self.logger.error(
+            #         indent(
+            #             "    log: {} (check log file(s) for error message)".format(
+            #                 ", ".join(msg["log"])
+            #             )
+            #         )
+            #     )
+            # if msg["conda_env"]:
+            #     self.logger.error(indent("    conda-env: {}".format(msg["conda_env"])))
+            # if msg["shellcmd"]:
+            #     self.logger.error(
+            #         indent(
+            #             "Error: the following command exited with an error\n{}".format(
+            #                 msg["shellcmd"]
+            #             )
+            #         )
+            #     )
 
             for item in msg["aux"].items():
                 self.logger.error(indent("    {}: {}".format(*item)))
@@ -339,7 +339,8 @@ class Logger:
             self.logger.error("Error in group job {}:".format(msg["groupid"]))
         else:
             if level == "error":
-                self.logger.error(msg["msg"])
+                # self.logger.error(msg["msg"])
+                pass
             elif level == "debug":
                 self.logger.debug(msg["msg"])
             elif level == "job_finished" and not self.quiet:
@@ -351,15 +352,16 @@ class Logger:
             elif level == "dag_debug":
                 if self.debug_dag:
                     if "file" in msg:
-                        self.logger.warning(
-                            "file {file}:\n    {msg}\n{exception}".format(
-                                file=msg["file"],
-                                msg=msg["msg"],
-                                exception=textwrap.indent(
-                                    str(msg["exception"]), "    "
-                                ),
-                            )
-                        )
+                        # self.logger.warning(
+                        #     "file {file}:\n    {msg}\n{exception}".format(
+                        #         file=msg["file"],
+                        #         msg=msg["msg"],
+                        #         exception=textwrap.indent(
+                        #             str(msg["exception"]), "    "
+                        #         ),
+                        #     )
+                        # )
+                        pass
                     else:
                         job = msg["job"]
 
@@ -397,7 +399,7 @@ logger = Logger()
 
 def setup_logger(
     handler=[],
-    quiet=False,
+    quiet=True,
     printshellcmds=False,
     printreason=False,
     debug_dag=False,
