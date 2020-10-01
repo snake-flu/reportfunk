@@ -391,18 +391,14 @@ def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
         if key in column_names or key in background_metadata_headers:
             if len(splits) == 1:
                 output.append(key + ":" + default_value)
-            key = splits[0].replace(" ","")
-            if key in column_names or key in background_metadata_headers:
-                if len(splits) == 1:
-                    output.append(key + ":" + default_value)
+            else:
+                value = splits[1]
+                if value in value_check or value == default_value:
+                    output.append(key + ":" + value)
                 else:
-                    value = splits[1]
-                    if value in value_check or value == default_value:
-                        output.append(key + ":" + value)
-                    else:
-                        sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
-                        sys.stderr.write(cyan(f"Please use one of {value_check}\n"))
-                        sys.exit(-1)
+                    sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
+                    sys.stderr.write(cyan(f"Please use one of {value_check}\n"))
+                    sys.exit(-1)
            
         else:
             sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
