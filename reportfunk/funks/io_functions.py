@@ -56,7 +56,7 @@ def type_input_file(input_arg,cwd,config):
                 query = input_file
 
             else:
-                sys.stderr.write(cyan(f"Error: -i,--input accepts either a csv or yaml file, or a comma-separated string of IDs"))
+                sys.stderr.write(cyan(f"Error: -i,--input accepts either a csv or yaml file, or a comma-separated string of IDs\n"))
                 sys.exit(-1)
 
     return query,configfile
@@ -110,6 +110,27 @@ def check_query_file(query, cwd, config):
     else:
         sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids in config (e.g. EPI12345,EPI23456) please provide them under keyword `ids`\n."))
         sys.exit(-1)
+
+def check_background_for_queries(config,default_dict):
+
+    data_column = config["data_column"]
+    input_column = config["input_column"]
+    queries = []
+    with open(config["query"],"r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            queries.append(row[input_column])
+    c = 0
+    with open(config["background_metadata"], "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row[data_column] in queries:
+                c +=1
+    if c == 0:
+        sys.stderr.write(cyan(f'Error: no valid queries to process.\n') + f'\
+0 queries from `{input_column}` column matched in background metadata to `{data_column}`.\n')
+        sys.exit(-1) 
+
 
 def check_query_for_input_column(config,default_dict):
 
@@ -370,14 +391,19 @@ def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
         if key in column_names or key in background_metadata_headers:
             if len(splits) == 1:
                 output.append(key + ":" + default_value)
-            else:
-                value = splits[1]
-                if value in value_check or value == default_value:
-                    output.append(key + ":" + value)
+            key = splits[0].replace(" ","")
+            if key in column_names or key in background_metadata_headers:
+                if len(splits) == 1:
+                    output.append(key + ":" + default_value)
                 else:
-                    sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
-                    sys.stderr.write(cyan(f"Please use one of {value_check}"))
-                    sys.exit(-1)
+                    value = splits[1]
+                    if value in value_check or value == default_value:
+                        output.append(key + ":" + value)
+                    else:
+                        sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
+                        sys.stderr.write(cyan(f"Please use one of {value_check}\n"))
+                        sys.exit(-1)
+           
         else:
             sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
             sys.exit(-1)
@@ -514,7 +540,16 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
     config["min_length"] = minlen
     config["max_ambiguity"] = maxambig
 
+    num_seqs =0
+
     if fasta != "":
+
+        queries = []
+        with open(config["query"],"r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                queries.append(row[config["input_column"]])
+                
         do_not_run = []
         run = []
         for record in SeqIO.parse(fasta, "fasta"):
@@ -530,11 +565,17 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
                     do_not_run.append(record)
                     print(cyan(f"    - {record.id}\thas an N content of {prop_N}"))
                 else:
-                    run.append(record)
-
+                    if record.id not in queries:
+                        record.description = record.description + f" fail=not_in_query_csv"
+                        do_not_run.append(record)
+                        print(cyan(f"    - {record.id}\tis not in query"))
+                    else:
+                        run.append(record)
+        
         post_qc_query = os.path.join(config["outdir"], 'query.post_qc.fasta')
         with open(post_qc_query,"w") as fw:
             SeqIO.write(run, fw, "fasta")
+
         qc_fail = os.path.join(config["outdir"],'query.failed_qc.csv')
 
         input_column = config["input_column"]
@@ -546,8 +587,13 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
                     if i.startswith("fail="):
                         fw.write(f"{record.id},{i}\n")
 
+        num_seqs = len(run)
+
     config["post_qc_query"] = post_qc_query
     config["qc_fail"] = qc_fail
+    config["num_seqs"] = num_seqs
+
+    return num_seqs
 
 def get_dict_of_metadata_filters(to_parse, metadata):
     column_names =""
@@ -701,7 +747,7 @@ def collapse_config(collapse_threshold,config,default_dict):
 
     config["collapse_threshold"] = collapse_threshold
 
-    print(green(f"Collapse threshold: ")+"f{collapse_threshold}")
+    print(green(f"Collapse threshold: ")+f"{collapse_threshold}")
 
 
 def distance_config(distance,up_distance,down_distance,config,default_dict):

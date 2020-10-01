@@ -313,7 +313,8 @@ def investigate_QC_fails(QC_file):
             elif "N_content" in reason:
                 n_content = reason.split(":")[1]
                 final_reason = "Sequence has too many Ns: " + str(float(round(float(n_content)*100))) + "\% of bases"
-
+            elif "not_in_query_csv" in reason:
+                final_reason = "Sequence not given in -i/--input"
             fail_dict[name] = final_reason
 
 
