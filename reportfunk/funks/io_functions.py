@@ -246,14 +246,14 @@ def get_tree_name_stem(tree_dir,config):
     config["tree_name_stem"] = tree_name_stem
 
 
-def check_args_and_config_list(config_key, argument, column_names,config,default_dict):
-
-    input_to_check = check_arg_config_default(config_key,argument,config,default_dict)
+def qc_list_inputs(config_key, column_names,config):
 
     background_headers = config["background_metadata_header"]
 
     list_of_fields = []
     arg_list = []
+
+    input_to_check = config[config_key]
 
     if type(input_to_check) != bool:
 
@@ -264,12 +264,13 @@ def check_args_and_config_list(config_key, argument, column_names,config,default
             field = field.replace(" ","")
             if field in column_names or field in background_headers:
                 list_of_fields.append(field)
+            elif config_key == "table_fields" and field.lower() == "tree":
+                print(green("Tree has been provided as a field, but will always be included in the table anyway so there is no need to specify it\n"))
             else:
                 sys.stderr.write(cyan(f"Error: '{field}' column not found in query metadata file or background metadata file for {config_key}\n"))
                 sys.exit(-1)
 
         field_str = ",".join(input_to_check)
-
 
         print(green(f"{config_key} shown:") + f" {field_str}")
 
@@ -345,75 +346,66 @@ def data_columns_to_config(args,config,default_dict):
     data_column = check_arg_config_default("data_column",args.data_column, config, default_dict)
     config["data_column"] = data_column
 
-def check_args_and_config_dict(argument, config_key, default_key, default_value,column_names, value_check, config):
+def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
 
     background_metadata_headers = config["background_metadata_header"]
 
     output = []
 
-    if argument: 
-        sections = argument.split(",")
-        for item in sections:
-            splits = item.split("=")
-            key = splits[0].replace(" ","")
-            if key in column_names or key in background_metadata_headers:
-                if len(splits) == 1:
-                    output.append(key + ":" + default_value)
-                else:
-                    value = splits[1]
-                    if value in value_check or value == default_value:
-                        output.append(key + ":" + value)
-                    else:
-                        sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
-                        sys.stderr.write(cyan(f"Please use one of {value_check}"))
-                        sys.exit(-1)
-            else:
-                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
-                sys.exit(-1)
+    input_to_check = config[config_key]
+    default_key = default_dict[config_key].split("=")[0] #if the len(dict) > 1 this will have to change
+    default_value = default_dict[config_key].split("=")[1]
 
-    elif config_key in config:
-        for key, value in config[config_key].items():
-            key = key.replace(" ","")
-            if value not in value_check and value != default_value:
-                sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
-                sys.stderr.write(cyan(f"Please use one of {value_check}"))
-                sys.exit(-1)
-            elif key not in column_names and key not in background_metadata_headers:
-                sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
-                sys.exit(-1)
-            else:
-                output.append(key + ":" + value)        
-
+    if type(input_to_check) == str: 
+        sections = input_to_check.split(",") 
     else:
-        output.append(default_key + ":" + default_value)
+        sections = input_to_check
+    
+    for item in sections:
+        if "=" in item:
+            splits = item.split("=")
+        elif ":" in item:
+            splits = item.split(":")
+        key = splits[0].replace(" ","")
+        if key in column_names or key in background_metadata_headers:
+            if len(splits) == 1:
+                output.append(key + ":" + default_value)
+            else:
+                value = splits[1]
+                if value in value_check or value == default_value:
+                    output.append(key + ":" + value)
+                else:
+                    sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
+                    sys.stderr.write(cyan(f"Please use one of {value_check}"))
+                    sys.exit(-1)
+        else:
+            sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
+            sys.exit(-1)
+
+    # elif type(input_to_check) == dict:
+    #     for key, value in input_to_check.items():
+    #         key = key.replace(" ","")
+    #         if value not in value_check and value != default_value:
+    #             sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
+    #             sys.stderr.write(cyan(f"Please use one of {value_check}"))
+    #             sys.exit(-1)
+    #         elif key not in column_names and key not in background_metadata_headers:
+    #             sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
+    #             sys.exit(-1)
+    #         else:
+    #             output.append(key + ":" + value)        
+
 
     output = ",".join(output)
 
     return output
 
 
-def node_summary(node_summary,config):
-    column_names = config["background_metadata_header"]
+def check_label_and_tree_and_date_fields(config, default_dict):
 
-    if not node_summary and "node_summary" not in config:
-        summary = "country"
-    else:
-        if "node_summary" in config:
-            option = config["node_summary"]
-        else:
-            option = node_summary
-        
-        if option in column_names:
-            summary = option
-        else:
-            sys.stderr.write(cyan(f"Error: {option} field not found in metadata file\n"))
-            sys.exit(-1)
+    metadata = config["background_metadata"]
+    metadata_headers = config["background_metadata_header"]
     
-    print(green(f"Summarise collapsed nodes by:") + f" {summary}")
-    config["node_summary"] = summary
-
-def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_arg, date_fields, input_column, display_name_arg, config, default_dict,metadata):
-
     acceptable_colours = get_colours()
     queries = []
     
@@ -425,9 +417,10 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_ar
     input_column = config["input_column"]
     data_column= config["data_column"]
 
-    display_name = check_arg_config_default("display_name",display_name_arg,config,default_dict) 
-    if not display_name:
+    if not config["display_name"]:
         display_name = input_column
+    else:
+        display_name = config["display_name"]
 
     with open(config["query"], newline="") as f:
         reader = csv.DictReader(f)
@@ -450,15 +443,14 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_ar
             
         print(green(f"Number of queries:") + f" {len(queries)}")
 
-    tree_field_str = check_args_and_config_list("tree_fields", tree_fields, column_names, config, default_dict)
+    tree_field_str = qc_list_inputs("tree_fields", column_names, config)
+    labels_str = qc_list_inputs("label_fields", column_names, config)
+    date_field_str = qc_list_inputs("date_fields", column_names,config)
     
-    labels_str = check_args_and_config_list("label_fields", label_fields, column_names, config, default_dict)
-
-    date_field_str = check_args_and_config_list("date_fields",date_fields, column_names,config, default_dict)
     if date_field_str:
         check_date_columns(config["query"], metadata, date_field_str.split(",")) 
-    
-    graphic_dict_output = check_args_and_config_dict(colour_by_arg, "graphic_dict", default_dict["graphic_dict"], "default",column_names, acceptable_colours, config)
+
+    graphic_dict_output = qc_dict_inputs("colour_by", default_dict,column_names, acceptable_colours, config)
 
     for i in graphic_dict_output.split(","):
         element = i.split(":")[0]
@@ -467,37 +459,39 @@ def check_label_and_tree_and_date_fields(tree_fields, label_fields, colour_by_ar
             sys.exit(-1)
 
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
-    config["graphic_dict"] = graphic_dict_output
+    config["colour_by"] = graphic_dict_output
+
+    sample_date_column = config["sample_date_column"]
+    if sample_date_column not in column_names and sample_date_column not in metadata_headers:
+        sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in query or background metadata.\n"))
+        sys.exit(-1)
+    else:
+        print(green(f'Using {sample_date_column} as sample date'))
 
 def check_table_fields(table_fields, snp_data, config, default_dict):
     
-    with open(config["query"], newline="") as f:
-        reader = csv.DictReader(f)
-        column_names = reader.fieldnames
+    column_names = config["query_metadata_header"]
 
-    table_field_str = check_args_and_config_list("table_fields",table_fields, column_names, config, default_dict)
+    table_field_str = qc_list_inputs("table_fields", column_names, config)
 
-    if snp_data:
-        config["snps_in_seq_table"] = True
-    elif not snp_data and "snps_in_seq_table" not in config:
-        config["snps_in_seq_table"] = False
-    #otherwise it's just specified in the config
+    print(green(f"Displaying {table_field_str} as well as Query ID and Tree in table\n"))
+    
+    if config["include_snp_table"]:
+        print(green(f"Showing SNP distance data in table\n"))
+    else:
+        print(green(f"Not showing SNP information in table\n"))
 
-def check_summary_fields(summary_field, config):
+def check_summary_field(config_key, config, default_dict):
 
     column_names = config["background_metadata_header"]
 
-    if not summary_field:
-        summary = "lineage"
-    else:
-        if summary_field in column_names:
-            summary = summary_field
-        else:
-            sys.stderr.write(cyan(f"Error: {summary_field} field not found in metadata file\n"))
-            sys.exit(-1)
+    summary_field = config[config_key]
+
+    if summary_field not in column_names: 
+        sys.stderr.write(cyan(f"Error: {summary_field} field not found in metadata file\n"))
+        sys.exit(-1)
         
-    print(green(f"Going to summarise collapsed nodes by: ") + f"{summary}")
-    config["node_summary"] = summary
+    print(green(f"Going to summarise collapsed nodes by: ") + f"{summary_field}")
 
 def check_arg_config_default(key,arg,config,default):
     new_str = ""

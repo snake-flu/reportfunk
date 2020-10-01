@@ -204,6 +204,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
             date = sequence["sample_date"] #will need generalising for a different background database
             country = sequence["country"]
 
+            #leave this for now, but may need to just remove adm2 attribute_dict stuff
             if "adm2" in col_names:
                 adm2 = sequence["adm2"]
             else:

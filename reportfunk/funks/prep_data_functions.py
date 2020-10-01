@@ -30,9 +30,13 @@ def analyse_inputs(inputs):
     tree_fields, label_fields, graphic_dict, node_summary_option, map_sequences, mapping_trait, map_inputs = inputs 
 
     print("Showing " + ",".join(tree_fields) + " on the tree.")
-    print(",".join(list(graphic_dict.keys())) + " fields are displayed graphically using " + ",".join(list(graphic_dict.values())) + " colour schemes respectively.")
+
+    if len(graphic_dict) > 1:
+        print(",".join(list(graphic_dict.keys())) + " fields are displayed graphically using " + ",".join(list(graphic_dict.values())) + " colour schemes respectively.")
+    else:
+        print(",".join(list(graphic_dict.keys())) + "is shown graphically on the tree using " + ",".join(list(graphic_dict.values())) + "as the colour scheme.")
     
-    if label_fields != "NONE":
+    if label_fields:
         print("Labelling by " + ",".join(label_fields) + " on the tree.")
     
     print("Summarising nodes by " + node_summary_option)
