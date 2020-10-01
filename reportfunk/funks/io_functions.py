@@ -694,6 +694,22 @@ def generate_query_from_metadata(from_metadata, metadata, config):
                 print(f" - {i}")
     return query
 
+
+def collapse_config(collapse_threshold,config,default_dict):
+
+    collapse_threshold = check_arg_config_default("collapse_threshold",collapse_threshold, config, default_dict)
+
+    try:
+        collapse_threshold = int(collapse_threshold)
+    except:
+        sys.stderr.write(cyan(f"Error: collapse_threshold must be an integer\n"))
+        sys.exit(-1)
+
+    config["collapse_threshold"] = collapse_threshold
+
+    print(green(f"Collapse threshold: ")+"f{collapse_threshold}")
+
+
 def distance_config(distance,up_distance,down_distance,config,default_dict):
 
     distance = check_arg_config_default("distance",distance, config, default_dict)
