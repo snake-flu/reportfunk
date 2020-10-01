@@ -541,7 +541,7 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
     config["min_length"] = minlen
     config["max_ambiguity"] = maxambig
 
-    count_seqs =0
+    num_seqs =0
 
     if fasta != "":
 
@@ -569,6 +569,7 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
                     if record.id not in queries:
                         record.description = record.description + f" fail=not_in_query_csv"
                         do_not_run.append(record)
+                        print(cyan(f"    - {record.id}\tis not in query"))
                     else:
                         run.append(record)
         
@@ -586,11 +587,14 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
                 for i in desc:
                     if i.startswith("fail="):
                         fw.write(f"{record.id},{i}\n")
-        count_seqs = len(run)
+
+        num_seqs = len(run)
+
     config["post_qc_query"] = post_qc_query
     config["qc_fail"] = qc_fail
+    config["num_seqs"] = num_seqs
 
-    return count_seqs
+    return num_seqs
 
 def get_dict_of_metadata_filters(to_parse, metadata):
     column_names =""
