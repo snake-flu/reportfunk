@@ -758,6 +758,7 @@ def distance_config(distance,up_distance,down_distance,config,default_dict):
 
     try:
         distance = int(distance)
+        config["distance"] = distance
     except:
         sys.stderr.write(cyan(f"Error: distance must be an integer\n"))
         sys.exit(-1)
@@ -769,7 +770,8 @@ def distance_config(distance,up_distance,down_distance,config,default_dict):
             sys.stderr.write(cyan(f"Error: down_distance must be an integer\n"))
             sys.exit(-1)
     else:
-        config["down_distance"] = distance
+        down_distance = distance
+        config["down_distance"] = down_distance
 
     if up_distance:
         try:
@@ -777,8 +779,10 @@ def distance_config(distance,up_distance,down_distance,config,default_dict):
         except:
             sys.stderr.write(cyan(f"Error: up_distance must be an integer\n"))
             sys.exit(-1)
+    else:
+        up_distance = distance
+        config["up_distance"] = up_distance
 
-    config["distance"] = distance
 
     print(green(f"Extraction radius:\n")+f"\tUp distance: {up_distance}\n\tDown distance: {down_distance}\n")
 
