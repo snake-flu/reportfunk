@@ -71,7 +71,10 @@ def display_name(tree, tree_name, tree_dir, full_taxon_dict, query_dict, private
                     
                     if "adm2" in taxon_obj.attribute_dict.keys() and not private:
                         adm2 = taxon_obj.attribute_dict["adm2"]
-                        k.traits["display"] = f"{display_name_element}|{adm2}|{date}"
+                        if adm2 !="":
+                            k.traits["display"] = f"{display_name_element}|{adm2}|{date}"
+                        else:
+                            k.traits["display"] = f"{display_name_element}|{date}"
 
                     count = 0
                     if custom_tip_fields: 

@@ -229,21 +229,6 @@ def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     config["tempdir"] = tempdir 
     return tempdir
 
-def local_lineages_to_config(central, neighbouring, region, config):
-
-    if config["local_lineages"] == True:
-        lineage_tables = []
-        for r,d,f in os.walk(os.path.join(config["outdir"], 'figures')):
-            for fn in f:
-                if fn.endswith("_lineageTable.md"):
-                    lineage_tables.append(os.path.join(config["outdir"], 'figures', fn))
-
-        config["lineage_tables"] = lineage_tables
-        config["lineage_maps"] = [central, neighbouring, region]
-    else:
-        config["lineage_tables"] = []
-        config["lineage_maps"] = []
-
 
 def get_tree_name_stem(tree_dir,config):
     tree_name_stems = []
@@ -302,14 +287,19 @@ def qc_list_inputs(config_key, column_names,config):
     
     return field_str
 
-def check_date_format(date_string,row_number,column_name):
+def check_date_format(date_string,config_key=None,row_number=None,column_name=None):
     date_format = '%Y-%m-%d'
     check_date= ""
     try:
         check_date = datetime.strptime(date_string, date_format).date()
     except:
-        sys.stderr.write(cyan(f"Error: Metadata field `{date_string}` [at column: {column_name}, row: {row_number}] contains unaccepted date format\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+        if row_number and column_name:
+            sys.stderr.write(cyan(f"Error: Metadata field `{date_string}` [at column: {column_name}, row: {row_number}] contains unaccepted date format\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+        else:
+            sys.stderr.write(cyan(f"Error: Input '{config_key}' is the wrong date format.\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+
         sys.exit(-1)
+        
     
     return check_date
 
