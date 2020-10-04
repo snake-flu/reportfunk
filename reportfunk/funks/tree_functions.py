@@ -340,7 +340,7 @@ def sort_trees_index(tree_dir):
         
     return c
 
-def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, min_uk_taxa=3):
+def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, tree_to_all_tip, tree_to_querys, min_uk_taxa=3):
 
     tallest_height = find_tallest_tree(input_dir)
 
@@ -349,6 +349,7 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
 
     overall_df_dict = defaultdict(dict)
 
+    too_large_tree_dict = defaultdict(list)
     overall_tree_count = 0
     
     tree_order = sort_trees_index(input_dir)
@@ -359,10 +360,10 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
         colour_dict_dict[trait] = colour_dict
 
     for fn in tree_order:
-        lineage = fn
+        tree_number = fn
         treename = f"{tree_name_stem}_{fn}"
         treefile = f"{tree_name_stem}_{fn}.tree"
-        nodefile = f"{tree_name_stem}_{fn}"
+        nodefile = f"{tree_name_stem}_{fn}.txt"
         num_taxa = 0
         intro_name = ""
         with open(input_dir + "/" + treefile,"r") as f:
@@ -392,7 +393,8 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
             for k in tree.Objects:
                 if k.branchType == 'leaf':
                     tips.append(k.name)
-            if len(tips) < 1000:
+            
+            if len(tips) < 500:
 
                 df_dict = summarise_node_table(input_dir, treename, taxon_dict)
 
@@ -403,10 +405,61 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
                 make_scaled_tree(tree, treename, input_dir, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, private)     
             
             else:
-                too_tall_trees.append(lineage)
-                continue
+                too_tall_trees.append(tree_number)
+                tips = tree_to_all_tip[treename]
+                too_large_tree_dict = summarise_large_tree(tips, treename, query_dict, taxon_dict, too_large_tree_dict, tree_to_querys)
+                
+    return too_tall_trees, overall_tree_count, colour_dict_dict, overall_df_dict, tree_order, too_large_tree_dict
 
-    return too_tall_trees, overall_tree_count, colour_dict_dict, overall_df_dict, tree_order
+def summarise_large_tree(tips, treename, query_dict, full_tax_dict, df_dict, tree_to_querys):
+
+    #want number of nodes total, list of queries in the tree, countries present, date range
+    query_count = 0
+    queries = []
+    dates = []
+    countries = set()
+    subtrees = []
+T
+    for i in tree_to_querys[treename]:
+        queries.append(i.display_name)
+
+    query_count = len(queries)
+
+    for tip in tips:
+        if "subtree" not in tip:
+            # if tip in query_dict:
+            #     query_count += 1
+            #     queries.append(tip)
+
+            tax_obj = full_tax_dict[tip]
+
+            if tax_obj.country != "NA":
+                countries.add(tax_obj.country)
+            if tax_obj.sample_date != "NA":
+                dates.append(tax_obj.sample_date)
+        else:
+            subtrees.append(tip)
+
+    if len(dates) > 0:
+        min_date = min(dates)
+        max_date = max(dates)
+    else:
+        min_date = "NA"
+        max_date = "NA"
+
+    total_tips = len(tips)
+
+    df_dict["Tree name"].append(treename)
+    df_dict["Number of tips"].append(total_tips)
+    df_dict["Number of queries"].append(query_count)
+    df_dict["Date range"].append(str(min_date) + " to " + str(max_date))
+    df_dict["Queries present"].append(str(queries).replace("[","").replace("]", "").replace("'",""))
+    df_dict["Countries present"].append(str(countries).replace("{","").replace("}","").replace("'",""))
+    df_dict["Subtrees present"].append(str(subtrees).replace("[","").replace("]","").replace("'",""))
+
+    return df_dict
+
+
 
 def summarise_collapsed_node_for_label(tree_dir, focal_node, focal_tree, full_tax_dict): 
     

@@ -19,6 +19,8 @@ class taxon():
         self.date_dict = {}
         self.table_dict = {}       
         self.attribute_dict = {}
+
+        self.country = country
         #self.attribute_dict["adm1"] = "NA" this should just be in tree_fields now
         
         if global_lineage == "":

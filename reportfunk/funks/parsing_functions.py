@@ -25,24 +25,38 @@ def parse_tree_tips(tree_dir):
 
     tips = []
     tip_to_tree = {}
+    tree_to_all_tip = defaultdict(list)
 
     for fn in os.listdir(tree_dir):
+        special_tips = []
         if fn.endswith("tree"):
             tree_name = fn.split(".")[0]
             tree = bt.loadNewick(tree_dir + "/" + fn, absoluteTime=False)
-            for k in tree.Objects:
-                if k.branchType == 'leaf' and "inserted" not in k.name:
+            for k in tree.Objects: #need to find out what collapsed is so that we can deal with this
+                if k.branchType == 'leaf' and "inserted" not in k.name and "subtree" not in k.name and "collapsed" not in k.name:
                     tips.append(k.name)
+                    special_tips.append(k.name)
                     tip_to_tree[k.name] = tree_name
+                
+                if k.branchType == 'leaf' and "subtree" in k.name:
+                    special_tips.append(k.name)
 
-        elif fn.endswith(".txt"):
+        elif fn.endswith(".txt") and fn != "collapse_report.txt":
+            tree_name = fn.split(".")[0]
             with open(tree_dir + "/" + fn) as f:
+                next(f)
                 for l in f:
                     tip_string = l.strip("\n").split("\t")[1]
                     tip_list = tip_string.split(",")
-                    tips.extend(tip_list)
+                    for tip in tip_list:
+                        if "collapsed" not in tip:
+                            tips.append(tip)
+                            special_tips.append(tip)
 
-    return tips, tip_to_tree
+            
+            tree_to_all_tip[tree_name] = special_tips
+
+    return tips, tip_to_tree, tree_to_all_tip
 
 def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields, virus="sars-cov-2"):
     
@@ -283,7 +297,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
 def parse_all_metadata(treedir, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, virus="sars-cov-2", UK=False):
 
-    present_in_tree, tip_to_tree = parse_tree_tips(treedir)
+    present_in_tree, tip_to_tree, tree_to_all_tip = parse_tree_tips(treedir)
     
     #parse the metadata with just those queries found in cog
     query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, virus=virus) 
@@ -294,7 +308,7 @@ def parse_all_metadata(treedir, filtered_background_metadata, background_metadat
     #parse the full background metadata
     full_tax_dict = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields, virus=virus)
 
-    return full_tax_dict, query_dict, tree_to_tip    
+    return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip   
 
 def investigate_QC_fails(QC_file):
 
