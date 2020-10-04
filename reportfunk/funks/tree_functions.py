@@ -419,7 +419,7 @@ def summarise_large_tree(tips, treename, query_dict, full_tax_dict, df_dict, tre
     dates = []
     countries = set()
     subtrees = []
-T
+
     for i in tree_to_querys[treename]:
         queries.append(i.display_name)
 
