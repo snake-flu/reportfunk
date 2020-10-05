@@ -506,7 +506,7 @@ def check_summary_field(config_key, config, default_dict):
     print(green(f"Going to summarise collapsed nodes by: ") + f"{summary_field}")
 
 def collapse_summary_path_to_config(config):
-    path = os.path.join(config["tempdir"],"catchment_trees", "tree_collapsed_nodes.csv")
+    path = os.path.join(config["outdir"],"catchment_trees", "tree_collapsed_nodes.csv")
     config["collapse_summary"] = path
 
 def check_arg_config_default(key,arg,config,default):
