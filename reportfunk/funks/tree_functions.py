@@ -51,13 +51,13 @@ def find_tallest_tree(input_dir):
     max_height = sorted(tree_heights, reverse=True)[0]
     return max_height
 
-def display_name(tree, tree_name, tree_dir, full_taxon_dict, query_dict, private, custom_tip_fields):
+def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dict, private, custom_tip_fields):
     for k in tree.Objects:
         if k.branchType == 'leaf':
             name = k.name
             
             if "inserted" in name:
-                collapsed_node_info, number_nodes = summarise_collapsed_node_for_label(tree_dir, name, tree_name, full_taxon_dict)
+                collapsed_node_info, number_nodes = summarise_collapsed_node_for_label(inserted_node_dict, name, tree_name, full_taxon_dict)
                 k.traits["display"] = collapsed_node_info
                 k.node_number = number_nodes
             else:
@@ -153,9 +153,9 @@ def find_colour_dict(query_dict, trait, colour_scheme):
         return colour_dict
 
     
-def make_scaled_tree(My_Tree, tree_name, tree_dir, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, private):
+def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, private):
 
-    display_name(My_Tree, tree_name, tree_dir, taxon_dict, query_dict, private, custom_tip_labels) 
+    display_name(My_Tree, tree_name, inserted_node_dict, taxon_dict, query_dict, private, custom_tip_labels) 
     My_Tree.uncollapseSubtree()
 
     if num_tips < 10:
@@ -325,7 +325,7 @@ def sort_trees_index(tree_dir):
         
     return c
 
-def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, tree_to_all_tip, tree_to_querys, min_uk_taxa=3):
+def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, tree_to_all_tip, tree_to_querys, inserted_node_dict, min_uk_taxa=3):
 
     tallest_height = find_tallest_tree(input_dir)
 
@@ -388,7 +388,7 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
 
                 overall_tree_count += 1      
                 
-                make_scaled_tree(tree, treename, input_dir, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, private)     
+                make_scaled_tree(tree, treename, inserted_node_dict, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, private)     
             
             else:
                 too_tall_trees.append(tree_number)
@@ -447,56 +447,54 @@ def summarise_large_tree(tips, treename, query_dict, full_tax_dict, df_dict, tre
 
 
 
-def summarise_collapsed_node_for_label(tree_dir, focal_node, focal_tree, full_tax_dict): 
+def summarise_collapsed_node_for_label(inserted_node_dict, focal_node, focal_tree, full_tax_dict): 
     
-    focal_tree_file = focal_tree + ".txt"
+                
+    member_list = inserted_node_dict[focal_tree][focal_node]
 
-    with open(tree_dir + "/" + focal_tree_file) as f:
-        next(f)
-        for l in f:
-            toks = l.strip("\n").split("\t")
-            node_name = toks[0]
-            members = toks[1]
+    summaries = []
+    subtrees = []
+    
+    number_nodes = str(len(member_list)) + " nodes"
+
+    for tax in member_list:
+        if tax in full_tax_dict.keys():
+            taxon_obj = full_tax_dict[tax]
+            summaries.append(taxon_obj.node_summary)
+        elif "subtree" in tax:
+            subtrees.append(tax)
+
+    
+    summary_counts = Counter(summaries)
+    most_common_summary = []
+    if len(summary_counts) > 5:
         
-            if node_name == focal_node:
-                summaries = []
-                
-                member_list = members.split(",")
-                number_nodes = str(len(member_list)) + " nodes"
+        remaining = len(summary_counts) - 5
+        
+        most_common_tups = summary_counts.most_common(5)
+        for i in most_common_tups:
+            most_common_summary.append(i[0])
 
-                for tax in member_list:
-                    if tax in full_tax_dict.keys():
-                        taxon_obj = full_tax_dict[tax]
-                        
-                        summaries.append(taxon_obj.node_summary)
+        pretty_summary_prep = str(most_common_summary).lstrip("[").rstrip("]").replace("'", "")
+        if remaining == 1:
+            pretty_summary = pretty_summary_prep + " and " + str(remaining) + " other"
+        else:
+            pretty_summary = pretty_summary_prep + " and " + str(remaining) + " others"
+    
+    else:
+        pretty_summary = str(list(summary_counts.keys())).lstrip("[").rstrip("]").replace("'", "")
 
-                summary_counts = Counter(summaries)
+    if len(subtrees) == 1:
+        pretty_subtree = " and " + str(subtrees[0])
+    elif len(subtrees) > 1:
+        pretty_subtree = " and " + ",".join(subtrees)
+    else:
+        pretty_subtree = ""
 
-                most_common_summary = []
+    node_number = focal_node.lstrip("inserted_node")
+    pretty_node_name = "Collapsed node " + node_number
 
-                if len(summary_counts) > 5:
-                    
-                    remaining = len(summary_counts) - 5
-                    
-                    most_common_tups = summary_counts.most_common(5)
-                    for i in most_common_tups:
-                        most_common_summary.append(i[0])
-
-                    pretty_summary_prep = str(most_common_summary).lstrip("[").rstrip("]").replace("'", "")
-                    
-                    if remaining == 1:
-                        pretty_summary = pretty_summary_prep + " and " + str(remaining) + " other"
-                    else:
-                        pretty_summary = pretty_summary_prep + " and " + str(remaining) + " others"
-                
-                else:
-                    pretty_summary = str(list(summary_counts.keys())).lstrip("[").rstrip("]").replace("'", "")
-
-
-                node_number = node_name.lstrip("inserted_node")
-                pretty_node_name = "Collapsed node " + node_number
-
-                info = pretty_node_name + ": " + number_nodes + " in " + pretty_summary
+    info = pretty_node_name + ": " + number_nodes + " in " + pretty_summary + pretty_subtree
 
     return info, len(member_list)
 
