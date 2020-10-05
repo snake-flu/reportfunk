@@ -585,7 +585,7 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
 
     return num_seqs
 
-def get_dict_of_metadata_filters(to_parse, metadata):
+def get_dict_of_metadata_filters(arg_type,to_parse, metadata):
     column_names =""
     query_dict = {}
 
@@ -607,7 +607,7 @@ def get_dict_of_metadata_filters(to_parse, metadata):
                 # exit and print what the valid column names are
                 cols = "\n- ".join(column_names)
                 cols = cols + "\n"
-                sys.stderr.write(cyan(f"""Error: `from-metadata` argument contains a column {column_name} that is not found in the metadata file supplied.
+                sys.stderr.write(cyan(f"""Error: `{arg_type}` argument contains a column {column_name} that is not found in the metadata file supplied.
 Columns that were found:\n{cols}"""))
                 sys.exit(-1)
     return query_dict,column_names
@@ -669,24 +669,7 @@ def parse_general_field(metadata,column_name,to_search,rows_to_search):
 
     return rows_to_search
 
-def generate_query_from_metadata(from_metadata, metadata, config):
-
-    print(green("From metadata:"))
-    to_parse = ""
-    if from_metadata:
-        to_parse = from_metadata
-
-    elif "from_metadata" in config:
-        to_parse = config["from_metadata"]
-
-    data_column = config["data_column"]
-    config["input_column"] = data_column
-    
-    # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
-    query_dict,column_names = get_dict_of_metadata_filters(to_parse, metadata)
-    
-    # if this is empty, for each column to search it'll open the whole file and search them
-    # if it's not empty, it'll only search this list of rows
+def filter_down_metadata(query_dict,metadata):
     rows_to_search = []
     
     for column_name in query_dict:
@@ -702,6 +685,29 @@ def generate_query_from_metadata(from_metadata, metadata, config):
             # parse by exact match 
             rows_to_search = parse_general_field(metadata,column_name,to_search,rows_to_search)
 
+    return rows_to_search
+
+
+def generate_query_from_metadata(from_metadata, metadata, config):
+
+    print(green("From metadata:"))
+    to_parse = ""
+    if from_metadata:
+        to_parse = from_metadata
+
+    elif "from_metadata" in config:
+        to_parse = config["from_metadata"]
+
+    data_column = config["data_column"]
+    config["input_column"] = data_column
+    
+    # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
+    query_dict,column_names = get_dict_of_metadata_filters("from_metadata",to_parse, metadata)
+    
+    rows_to_search = filter_down_metadata(query_dict,metadata)
+    # if this is empty, for each column to search it'll open the whole file and search them
+    # if it's not empty, it'll only search this list of rows
+    
     query = os.path.join(config["outdir"], "from_metadata_query.csv")
 
     with open(query,"w") as fw:
@@ -724,6 +730,42 @@ def generate_query_from_metadata(from_metadata, metadata, config):
                 print(f" - {i}")
     return query
 
+
+def parse_protect(protect_arg,metadata,config):
+
+    print(green("Protect sequences:"))
+    to_parse = ""
+    if protect_arg:
+        to_parse = protect_arg
+
+    elif config["protect"]:
+        to_parse = config["protect"]
+
+    data_column = config["data_column"]
+    
+    query_dict,column_names = get_dict_of_metadata_filters("protect",to_parse, metadata)
+
+    rows_to_search = filter_down_metadata(query_dict,metadata)
+
+    protect = os.path.join(config["outdir"], "protected_background.csv")
+
+    with open(protect,"w") as fw:
+        writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
+        writer.writeheader()
+        count = 0
+
+        protect_ids = []
+        for row,c in rows_to_search:
+            writer.writerow(row)
+            count +=1
+            protect_ids.append(row[data_column])
+
+        if count == 0:
+            print(cyan(f"Note: No sequences meet the criteria defined with `protect`.\n"))
+            config["protect"] = False
+        else:
+            config["protect"] = protect
+            print(green(f"Number of background sequences to be protected:") + f" {count}")
 
 def collapse_config(collapse_threshold,config,default_dict):
 
