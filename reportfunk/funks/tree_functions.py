@@ -294,15 +294,8 @@ def make_scaled_tree(My_Tree, tree_name, tree_dir, num_tips, colour_dict_dict, d
 
             ax.text(x,y,trait, rotation=90, size=15,ha="center", va="bottom")
     
-    if num_tips < 10:
-        fig2,ax2 =  plt.subplots(figsize=(20,page_height/5),facecolor='w',frameon=False, dpi=200)
-    else:
-        fig2,ax2 =  plt.subplots(figsize=(20,page_height/10),facecolor='w',frameon=False, dpi=200)
-
-    length = 0.00003
-
-    ax2.plot([0,length], [0.5,0.5], ls='-', lw=1, color="dimgrey")
-    ax2.text(0.000015,0.15,"1 SNP",size=20, ha="center", va="center")
+    ax.plot([0,0.00003], [-0.5,-0.5], ls='-', lw=2, color="dimgrey")
+    ax.text(0.000015,-1.15,"1 SNP",size=20, ha="center", va="center")
 
     ax.spines['top'].set_visible(False) ## make axes invisible
     ax.spines['right'].set_visible(False)
@@ -310,20 +303,12 @@ def make_scaled_tree(My_Tree, tree_name, tree_dir, num_tips, colour_dict_dict, d
     ax.spines['bottom'].set_visible(False)
     ax.set_xticks([])
     ax.set_yticks([])
-    ax2.spines['top'].set_visible(False) ## make axes invisible
-    ax2.spines['right'].set_visible(False)
-    ax2.spines['left'].set_visible(False)
-    ax2.spines['bottom'].set_visible(False)
-    ax2.set_xticks([])
-    ax2.set_yticks([])
-    
+
     ax.set_xlim(-space_offset,absolute_x_axis_size)
-    ax.set_ylim(min_y,max_y)
-    ax2.set_xlim(-space_offset,absolute_x_axis_size)
-    ax2.set_ylim(0,1)
+    ax.set_ylim(min_y-1,max_y)
+
 
     fig.tight_layout()
-
 
 
 def sort_trees_index(tree_dir):
@@ -351,6 +336,8 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
 
     too_large_tree_dict = defaultdict(list)
     overall_tree_count = 0
+
+    tree_to_num_tips = {}
     
     tree_order = sort_trees_index(input_dir)
 
@@ -365,13 +352,12 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
         treefile = f"{tree_name_stem}_{fn}.tree"
         nodefile = f"{tree_name_stem}_{fn}.txt"
         num_taxa = 0
-        intro_name = ""
         with open(input_dir + "/" + treefile,"r") as f:
             for l in f:
                 l = l.rstrip("\n")
                 if l.startswith(" Dimensions NTax="):
                     num_taxa = int(l.rstrip(";").split("=")[1])
-                    intro_name = fn
+                    tree_to_num_tips[tree_number] = num_taxa
 
         if num_taxa > 1: 
             tree = bt.loadNewick(input_dir + "/" + treefile, absoluteTime=False)
@@ -409,7 +395,7 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
                 tips = tree_to_all_tip[treename]
                 too_large_tree_dict = summarise_large_tree(tips, treename, query_dict, taxon_dict, too_large_tree_dict, tree_to_querys)
                 
-    return too_tall_trees, overall_tree_count, colour_dict_dict, overall_df_dict, tree_order, too_large_tree_dict
+    return too_tall_trees, overall_tree_count, colour_dict_dict, overall_df_dict, tree_order, too_large_tree_dict, tallest_height, tree_to_num_tips
 
 def summarise_large_tree(tips, treename, query_dict, full_tax_dict, df_dict, tree_to_querys):
 
