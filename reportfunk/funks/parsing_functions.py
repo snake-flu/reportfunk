@@ -95,7 +95,7 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
             
             tree_to_all_tip[tree_name] = all_tips
 
-    return present_in_tree, tip_to_tree, tree_to_all_tip, collapsed_node_dict, inserted_node_dict
+    return present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict
 
 def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields, virus="sars-cov-2"):
     

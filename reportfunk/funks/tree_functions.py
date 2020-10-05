@@ -81,7 +81,7 @@ def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dic
                         if name in query_dict.keys(): 
                             for label_element in custom_tip_fields:
                                 if count == 0:
-                                    display_name = taxon_obj.attribute_dict[label_element] 
+                                    display_name = taxon_obj.display_name
                                 else:   
                                     display_name = display_name + "|" + taxon_obj.attribute_dict[label_element]
                                 count += 1
@@ -448,7 +448,6 @@ def summarise_large_tree(tips, treename, query_dict, full_tax_dict, df_dict, tre
 
 
 def summarise_collapsed_node_for_label(inserted_node_dict, focal_node, focal_tree, full_tax_dict): 
-    
                 
     member_list = inserted_node_dict[focal_tree][focal_node]
 
@@ -462,7 +461,9 @@ def summarise_collapsed_node_for_label(inserted_node_dict, focal_node, focal_tre
             taxon_obj = full_tax_dict[tax]
             summaries.append(taxon_obj.node_summary)
         elif "subtree" in tax:
-            subtrees.append(tax)
+            number = tax.split("_")[-1]
+            pretty_tree = f"Tree {number}" 
+            subtrees.append(pretty_tree)
 
     
     summary_counts = Counter(summaries)
