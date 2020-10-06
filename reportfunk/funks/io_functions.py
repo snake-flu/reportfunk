@@ -6,6 +6,7 @@ import csv
 import sys
 from Bio import SeqIO
 from datetime import datetime 
+from datetime import date
 import tempfile
 import pkg_resources
 import yaml
@@ -173,9 +174,12 @@ def get_query_fasta(fasta_arg,cwd,config):
     
     config["fasta"] = fasta 
 
-def get_outdir(outdir_arg,cwd,config):
+def get_outdir(outdir_arg,output_prefix_arg,cwd,config,default_dict):
     outdir = ''
     
+    output_prefix = check_arg_config_default("output_prefix",output_prefix_arg, config, default_dict)
+    
+
     if outdir_arg:
         expanded_path = os.path.expanduser(outdir_arg)
         outdir = os.path.join(cwd,expanded_path)
@@ -188,10 +192,14 @@ def get_outdir(outdir_arg,cwd,config):
 
     else:
         timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
-        outdir = os.path.join(cwd, timestamp)
+        outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
         
         rel_outdir = os.path.join(".",timestamp)
-        
+    
+    today = date.today()
+    d = today.strftime("%Y-%m-%d")
+    config["output_prefix"] = f"{output_prefix}_{d}"
+
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
@@ -578,10 +586,12 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
 
     return num_seqs
 
-def get_dict_of_metadata_filters(to_parse, metadata):
+def get_dict_of_metadata_filters(arg_type,to_parse, metadata):
     column_names =""
     query_dict = {}
 
+    if not type(to_parse)==list:
+        to_parse = to_parse.split(" ")
     with open(metadata, newline="") as f:
         reader = csv.DictReader(f)
         column_names = reader.fieldnames
@@ -600,7 +610,7 @@ def get_dict_of_metadata_filters(to_parse, metadata):
                 # exit and print what the valid column names are
                 cols = "\n- ".join(column_names)
                 cols = cols + "\n"
-                sys.stderr.write(cyan(f"""Error: `from-metadata` argument contains a column {column_name} that is not found in the metadata file supplied.
+                sys.stderr.write(cyan(f"""Error: `{arg_type}` argument contains a column {column_name} that is not found in the metadata file supplied.
 Columns that were found:\n{cols}"""))
                 sys.exit(-1)
     return query_dict,column_names
@@ -662,24 +672,7 @@ def parse_general_field(metadata,column_name,to_search,rows_to_search):
 
     return rows_to_search
 
-def generate_query_from_metadata(from_metadata, metadata, config):
-
-    print(green("From metadata:"))
-    to_parse = ""
-    if from_metadata:
-        to_parse = from_metadata
-
-    elif "from_metadata" in config:
-        to_parse = config["from_metadata"]
-
-    data_column = config["data_column"]
-    config["input_column"] = data_column
-    
-    # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
-    query_dict,column_names = get_dict_of_metadata_filters(to_parse, metadata)
-    
-    # if this is empty, for each column to search it'll open the whole file and search them
-    # if it's not empty, it'll only search this list of rows
+def filter_down_metadata(query_dict,metadata):
     rows_to_search = []
     
     for column_name in query_dict:
@@ -695,6 +688,29 @@ def generate_query_from_metadata(from_metadata, metadata, config):
             # parse by exact match 
             rows_to_search = parse_general_field(metadata,column_name,to_search,rows_to_search)
 
+    return rows_to_search
+
+
+def generate_query_from_metadata(from_metadata, metadata, config):
+
+    print(green("From metadata:"))
+    to_parse = ""
+    if from_metadata:
+        to_parse = from_metadata
+
+    elif "from_metadata" in config:
+        to_parse = config["from_metadata"]
+
+    data_column = config["data_column"]
+    config["input_column"] = data_column
+    
+    # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
+    query_dict,column_names = get_dict_of_metadata_filters("from_metadata",to_parse, metadata)
+    
+    rows_to_search = filter_down_metadata(query_dict,metadata)
+    # if this is empty, for each column to search it'll open the whole file and search them
+    # if it's not empty, it'll only search this list of rows
+    
     query = os.path.join(config["outdir"], "from_metadata_query.csv")
 
     with open(query,"w") as fw:
@@ -716,6 +732,47 @@ def generate_query_from_metadata(from_metadata, metadata, config):
             for i in query_ids:
                 print(f" - {i}")
     return query
+
+
+def parse_protect(protect_arg,metadata,config):
+
+    print(green("Protect sequences:"))
+    to_parse = ""
+    if protect_arg:
+        to_parse = protect_arg
+
+    elif "protect" in config:
+        to_parse = config["protect"]
+    else:
+        config["protect"] = False
+        to_parse = False
+
+    if to_parse:
+        data_column = config["data_column"]
+        
+        query_dict,column_names = get_dict_of_metadata_filters("protect",to_parse, metadata)
+
+        rows_to_search = filter_down_metadata(query_dict,metadata)
+
+        protect = os.path.join(config["outdir"], "protected_background.csv")
+
+        with open(protect,"w") as fw:
+            writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
+            writer.writeheader()
+            count = 0
+
+            protect_ids = []
+            for row,c in rows_to_search:
+                writer.writerow(row)
+                count +=1
+                protect_ids.append(row[data_column])
+
+            if count == 0:
+                print(cyan(f"Note: No sequences meet the criteria defined with `protect`.\n"))
+                config["protect"] = False
+            else:
+                config["protect"] = protect
+                print(green(f"Number of background sequences to be protected:") + f" {count}")
 
 
 def collapse_config(collapse_threshold,config,default_dict):
