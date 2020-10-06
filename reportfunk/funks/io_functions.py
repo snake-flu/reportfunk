@@ -6,6 +6,7 @@ import csv
 import sys
 from Bio import SeqIO
 from datetime import datetime 
+from datetime import date
 import tempfile
 import pkg_resources
 import yaml
@@ -173,9 +174,12 @@ def get_query_fasta(fasta_arg,cwd,config):
     
     config["fasta"] = fasta 
 
-def get_outdir(outdir_arg,cwd,config):
+def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
     outdir = ''
     
+    output_prefix = check_arg_config_default("output_prefix",output_prefix_arg, config, default_dict)
+    
+
     if outdir_arg:
         expanded_path = os.path.expanduser(outdir_arg)
         outdir = os.path.join(cwd,expanded_path)
@@ -188,10 +192,14 @@ def get_outdir(outdir_arg,cwd,config):
 
     else:
         timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
-        outdir = os.path.join(cwd, timestamp)
+        outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
         
         rel_outdir = os.path.join(".",timestamp)
-        
+    
+    today = date.today()
+    d = today.strftime("%Y-%m-%d")
+    config["output_prefix"] = f"{output_prefix}_{d}"
+
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
