@@ -589,6 +589,8 @@ def get_dict_of_metadata_filters(arg_type,to_parse, metadata):
     column_names =""
     query_dict = {}
 
+    if not type(to_parse)==list:
+        to_parse = to_parse.split(" ")
     with open(metadata, newline="") as f:
         reader = csv.DictReader(f)
         column_names = reader.fieldnames
@@ -738,34 +740,39 @@ def parse_protect(protect_arg,metadata,config):
     if protect_arg:
         to_parse = protect_arg
 
-    elif config["protect"]:
+    elif "protect" in config:
         to_parse = config["protect"]
+    else:
+        config["protect"] = False
+        to_parse = False
 
-    data_column = config["data_column"]
-    
-    query_dict,column_names = get_dict_of_metadata_filters("protect",to_parse, metadata)
+    if to_parse:
+        data_column = config["data_column"]
+        
+        query_dict,column_names = get_dict_of_metadata_filters("protect",to_parse, metadata)
 
-    rows_to_search = filter_down_metadata(query_dict,metadata)
+        rows_to_search = filter_down_metadata(query_dict,metadata)
 
-    protect = os.path.join(config["outdir"], "protected_background.csv")
+        protect = os.path.join(config["outdir"], "protected_background.csv")
 
-    with open(protect,"w") as fw:
-        writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
-        writer.writeheader()
-        count = 0
+        with open(protect,"w") as fw:
+            writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
+            writer.writeheader()
+            count = 0
 
-        protect_ids = []
-        for row,c in rows_to_search:
-            writer.writerow(row)
-            count +=1
-            protect_ids.append(row[data_column])
+            protect_ids = []
+            for row,c in rows_to_search:
+                writer.writerow(row)
+                count +=1
+                protect_ids.append(row[data_column])
 
-        if count == 0:
-            print(cyan(f"Note: No sequences meet the criteria defined with `protect`.\n"))
-            config["protect"] = False
-        else:
-            config["protect"] = protect
-            print(green(f"Number of background sequences to be protected:") + f" {count}")
+            if count == 0:
+                print(cyan(f"Note: No sequences meet the criteria defined with `protect`.\n"))
+                config["protect"] = False
+            else:
+                config["protect"] = protect
+                print(green(f"Number of background sequences to be protected:") + f" {count}")
+
 
 def collapse_config(collapse_threshold,config,default_dict):
 
