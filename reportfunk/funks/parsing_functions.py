@@ -91,7 +91,6 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
                     node_dict[node_name] = list_of_tips
             
             inserted_node_dict[tree_name] = node_dict
-
             
             tree_to_all_tip[tree_name] = all_tips
 
@@ -103,6 +102,10 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
     query_id_dict = {}
 
     tree_to_tip = defaultdict(list)
+
+    with open(metadata_file, "r") as f:
+        reader = csv.DictReader(f)
+        headers = reader.fieldnames   
 
     with open(metadata_file, "r") as f:
         reader = csv.DictReader(f)
@@ -118,13 +121,19 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             closest_distance = sequence["SNPdistance"]
             snps = sequence['SNPs']
 
-            if sequence["country"] == "UK":
-                adm1 = UK_adm1(query_name, sequence["adm1"])
-
             if virus == "sars-cov-2": #also uk_lineage and phylotype are UK specific, but it has it in llama so leave it for now
-                glob_lineage = sequence['lineage']
-                uk_lineage = sequence['uk_lineage']
-                phylotype = sequence["phylotype"]
+                if "lineage" in headers:
+                    glob_lineage = sequence['lineage']
+                else:
+                    glob_lineage = ""
+                if "uk_lineage" in headers:
+                    uk_lineage = sequence['uk_lineage']
+                else:
+                    uk_lineage = ""
+                if "phylotype" in headers:
+                    phylotype = sequence["phylotype"]
+                else:
+                    phylotype = ""
                 
                 #do we want table fields in llama? probably yes
                 new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields, global_lineage=glob_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
@@ -222,7 +231,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                         
                         if UK:
                             if col == "adm1":
-                                adm1 = UK_adm1(sequence[col])
+                                adm1 = UK_adm1(name, sequence[col])
                                 taxon.attribute_dict["adm1"] = adm1
 
                             if col == "adm2":
@@ -238,7 +247,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
       
     return new_query_dict 
 
-def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, date_fields=None, virus="sars-cov-2"):
+def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, date_fields=None, virus="sars-cov-2"):
 
     full_tax_dict = query_dict.copy()
 
@@ -253,41 +262,39 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
         for sequence in in_data:
             
             seq_name = sequence[database_name_column]
-
-            date = sequence["sample_date"] #will need generalising for a different background database
+            date = sequence[database_sample_date_column] 
             country = sequence["country"]
 
-            #leave this for now, but may need to just remove adm2 attribute_dict stuff
             if "adm2" in col_names:
                 adm2 = sequence["adm2"]
+                adm2_present_in_background = True
             else:
                 adm2 = ""
+                adm2_present_in_background = False
 
-            if virus == "sars-cov-2":
-                uk_lineage = sequence["uk_lineage"]
-                global_lineage = sequence["lineage"]
-                phylotype = sequence["phylotype"]
+            # if virus == "sars-cov-2":
+            #     uk_lineage = sequence["uk_lineage"]
+            #     global_lineage = sequence["lineage"]
+            #     phylotype = sequence["phylotype"]
 
             node_summary_trait = sequence[node_summary_option]
 
             if seq_name in present_in_tree and seq_name not in query_dict.keys():
-                if virus == "sars-cov-2":
-                    new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields, global_lineage=global_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
-                else:
-                    new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields)
+                # if virus == "sars-cov-2":
+                #     new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields, global_lineage=global_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
+                # else:
+                new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields)
                 
                 if date == "":
                     date = "NA"
                 
                 new_taxon.sample_date = date
-
                 new_taxon.node_summary = node_summary_trait
 
                 if seq_name in tip_to_tree.keys():
                     new_taxon.tree = tip_to_tree[seq_name]
 
                 new_taxon.attribute_dict["adm2"] = adm2
-                new_taxon.country = country 
 
                 full_tax_dict[seq_name] = new_taxon
 
@@ -331,10 +338,9 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
                 full_tax_dict[seq_name] = tax_object
                     
-    return full_tax_dict
-    
+    return full_tax_dict, adm2_present_in_background
 
-def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, virus="sars-cov-2", UK=False):
+def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, database_sample_date_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, virus="sars-cov-2", UK=False):
 
     present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict = parse_tree_tips(treedir, collapsed_node_file)
     
@@ -345,9 +351,9 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
     
     #parse the full background metadata
-    full_tax_dict = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, date_fields, virus=virus)
+    full_tax_dict, adm2_present_in_background = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, date_fields, virus=virus)
 
-    return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict   
+    return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background   
 
 def investigate_QC_fails(QC_file):
 

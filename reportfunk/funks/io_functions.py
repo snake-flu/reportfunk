@@ -392,21 +392,7 @@ def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
            
         else:
             sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
-            sys.exit(-1)
-
-    # elif type(input_to_check) == dict:
-    #     for key, value in input_to_check.items():
-    #         key = key.replace(" ","")
-    #         if value not in value_check and value != default_value:
-    #             sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
-    #             sys.stderr.write(cyan(f"Please use one of {value_check}"))
-    #             sys.exit(-1)
-    #         elif key not in column_names and key not in background_metadata_headers:
-    #             sys.stderr.write(cyan(f"Error: {key} field not found in metadata file or background metadata file for {config_key}\n"))
-    #             sys.exit(-1)
-    #         else:
-    #             output.append(key + ":" + value)        
-
+            sys.exit(-1) 
 
     output = ",".join(output)
 
@@ -474,11 +460,18 @@ def check_label_and_tree_and_date_fields(config, default_dict):
     config["colour_by"] = graphic_dict_output
 
     sample_date_column = config["sample_date_column"]
-    if sample_date_column not in column_names and sample_date_column not in metadata_headers:
-        sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in query or background metadata.\n"))
+    if sample_date_column not in column_names:
+        sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in query for sample date indication.\n"))
         sys.exit(-1)
     else:
-        print(green(f'Using {sample_date_column} as sample date'))
+        print(green(f'Using {sample_date_column} as sample date in query metadata'))
+
+    database_sample_date_column = config["database_sample_date_column"]
+    if database_sample_date_column not in metadata_headers:
+        sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in background metadata for sample date indication.\n"))
+        sys.exit(-1)
+    else:
+        print(green(f'Using {sample_date_column} as sample date in background metadata'))
 
 def check_table_fields(table_fields, snp_data, config, default_dict):
     

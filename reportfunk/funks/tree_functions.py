@@ -459,7 +459,11 @@ def summarise_collapsed_node_for_label(inserted_node_dict, focal_node, focal_tre
     for tax in member_list:
         if tax in full_tax_dict.keys():
             taxon_obj = full_tax_dict[tax]
-            summaries.append(taxon_obj.node_summary)
+            try:
+                summaries.append(taxon_obj.node_summary)
+            except: #this is to fill in for the not working jclusterfunc
+                pass
+
         elif "subtree" in tax:
             number = tax.split("_")[-1]
             pretty_tree = f"Tree {number}" 
@@ -468,6 +472,7 @@ def summarise_collapsed_node_for_label(inserted_node_dict, focal_node, focal_tre
     
     summary_counts = Counter(summaries)
     most_common_summary = []
+    
     if len(summary_counts) > 5:
         
         remaining = len(summary_counts) - 5
