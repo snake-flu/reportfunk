@@ -174,7 +174,7 @@ def get_query_fasta(fasta_arg,cwd,config):
     
     config["fasta"] = fasta 
 
-def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
+def get_outdir(outdir_arg,output_prefix_arg,cwd,config,default_dict):
     outdir = ''
     
     output_prefix = check_arg_config_default("output_prefix",output_prefix_arg, config, default_dict)
