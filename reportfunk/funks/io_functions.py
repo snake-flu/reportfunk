@@ -467,19 +467,21 @@ def check_label_and_tree_and_date_fields(config, default_dict):
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["colour_by"] = graphic_dict_output
 
-    sample_date_column = config["sample_date_column"]
-    if sample_date_column not in column_names:
-        sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in query for sample date indication.\n"))
-        sys.exit(-1)
-    else:
-        print(green(f'Using {sample_date_column} as sample date in query metadata'))
-
     database_sample_date_column = config["database_sample_date_column"]
     if database_sample_date_column not in metadata_headers:
         sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in background metadata for sample date indication.\n"))
         sys.exit(-1)
     else:
         print(green(f'Using {sample_date_column} as sample date in background metadata'))
+
+    #Removing this for now because it checks in the report maker if it's present. Easier I think because they don't have to provide any date here.
+    # sample_date_column = config["sample_date_column"]
+    # if len(column_names) > 1 and sample_date_column not in column_names and sample_date_column != "sample_date": #if the input is a query string, or they've provided an actual date column to check. 
+    # #If it's default I don't think we check it because they don't to provide that data (as long as it's somewhere)
+    #     sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in query for sample date indication.\n"))
+    #     sys.exit(-1)
+    # else:
+    #     print(green(f'Using {sample_date_column} as sample date in query metadata'))
 
 def check_table_fields(table_fields, snp_data, config, default_dict):
     

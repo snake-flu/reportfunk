@@ -96,7 +96,7 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
 
     return present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict
 
-def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields, virus="sars-cov-2"):
+def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields, database_date_column, virus="sars-cov-2"):
     
     query_dict = {}
     query_id_dict = {}
@@ -116,7 +116,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             query_id = sequence['query_id']
             query_name = sequence['query']
             closest_name = sequence["closest"]
-            sample_date = sequence["sample_date"] #this may need to be flexible if using a different background database
+            sample_date = sequence[database_date_column] #this may need to be flexible if using a different background database
 
             closest_distance = sequence["SNPdistance"]
             snps = sequence['SNPs']
@@ -345,7 +345,7 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict = parse_tree_tips(treedir, collapsed_node_file)
     
     #parse the metadata with just those queries found in cog
-    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, virus=virus) 
+    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column, virus=virus) 
 
     #Any query information they have provided
     query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
