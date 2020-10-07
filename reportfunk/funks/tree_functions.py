@@ -78,7 +78,7 @@ def default_labels(taxon_obj, custom_tip_fields):
     return display_name
 
 
-def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dict, private, custom_tip_fields, safe_status):
+def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dict, private, custom_tip_fields, safety_level):
     for k in tree.Objects:
         if k.branchType == 'leaf':
             name = k.name
@@ -91,8 +91,8 @@ def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dic
                 if name in full_taxon_dict:
                     taxon_obj = full_taxon_dict[name]
 
-                    if safe_status:
-                        display = cfunks.generate_labels(taxon_obj,safe_status, custom_tip_fields)
+                    if safety_level:
+                        display = cfunks.generate_labels(taxon_obj,safety_level, custom_tip_fields)
                     else: 
                         display = default_labels(taxon_obj, custom_tip_fields)
                     
@@ -162,9 +162,9 @@ def find_colour_dict(query_dict, trait, colour_scheme):
         return colour_dict
 
     
-def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safe_status):
+def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level):
 
-    display_name(My_Tree, tree_name, inserted_node_dict, taxon_dict, query_dict, private, custom_tip_labels, safe_status) 
+    display_name(My_Tree, tree_name, inserted_node_dict, taxon_dict, query_dict, private, custom_tip_labels, safety_level) 
     My_Tree.uncollapseSubtree()
 
     if num_tips < 10:
@@ -334,7 +334,7 @@ def sort_trees_index(tree_dir):
         
     return c
 
-def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, tree_to_all_tip, tree_to_querys, inserted_node_dict,  safe_status=None, min_uk_taxa=3):
+def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, tree_to_all_tip, tree_to_querys, inserted_node_dict,  safety_level=None, min_uk_taxa=3):
 
     tallest_height = find_tallest_tree(input_dir)
 
@@ -397,7 +397,7 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
 
                 overall_tree_count += 1      
                 
-                make_scaled_tree(tree, treename, inserted_node_dict, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safe_status)     
+                make_scaled_tree(tree, treename, inserted_node_dict, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level)     
             
             else:
                 too_tall_trees.append(tree_number)

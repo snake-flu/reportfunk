@@ -64,7 +64,7 @@ def find_colour_dict(date_fields):
 
     return colour_dict
 
-def plot_time_series(tips, query_dict, overall_max_date, overall_min_date, date_fields, custom_tip_fields, safe_status=None):
+def plot_time_series(tips, query_dict, overall_max_date, overall_min_date, date_fields, custom_tip_fields, safety_level=None):
 
     colour_dict = find_colour_dict(date_fields)    
 
@@ -104,8 +104,8 @@ def plot_time_series(tips, query_dict, overall_max_date, overall_min_date, date_
                 if date != first_date and date != last_date:
                     other_dates[date_type] = date
             
-            if safe_status:
-                label = cfunks.generate_labels(tax,safe_status, custom_tip_fields)    
+            if safety_level:
+                label = cfunks.generate_labels(tax,safety_level, custom_tip_fields)    
             else:   
                 label = display_name(tax, custom_tip_fields)
             
