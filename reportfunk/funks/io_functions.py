@@ -469,10 +469,10 @@ def check_label_and_tree_and_date_fields(config, default_dict):
 
     database_sample_date_column = config["database_sample_date_column"]
     if database_sample_date_column not in metadata_headers:
-        sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in background metadata for sample date indication.\n"))
+        sys.stderr.write(cyan(f"Error: Field {database_sample_date_column} not in background metadata for sample date indication.\n"))
         sys.exit(-1)
     else:
-        print(green(f'Using {sample_date_column} as sample date in background metadata'))
+        print(green(f'Using {database_sample_date_column} as sample date in background metadata'))
 
     #Removing this for now because it checks in the report maker if it's present. Easier I think because they don't have to provide any date here.
     # sample_date_column = config["sample_date_column"]
