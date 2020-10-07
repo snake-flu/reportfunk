@@ -203,7 +203,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
             if name in query_id_dict.keys():
                 taxon = query_id_dict[name]
 
-                taxon.display_name = sequence[display_name]
+                taxon.display_name_input = sequence[display_name]
                 
                 for field in date_fields:
                     if field in reader.fieldnames:

@@ -21,11 +21,8 @@ def make_custom_table(query_dict, table_fields, include_snp_table):
             df_dict = df_dict_seqprovided
             seqprovided += 1
 
-        if query.display_name != query.name:
-            df_dict["Query ID"].append(query.display_name.replace("|","\|"))
-        else:
-            df_dict["Query ID"].append(query.query_id.replace("|","\|"))
-        
+
+        df_dict["Query ID"].append(query.display_name.replace("|","\|"))
         
         if query.in_db:
             df_dict["Sequence name in tree"].append(query.name)
