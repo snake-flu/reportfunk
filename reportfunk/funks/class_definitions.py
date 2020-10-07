@@ -12,13 +12,16 @@ class taxon():
     def __init__(self, name, country, label_fields, tree_fields, table_fields, global_lineage="", uk_lineage="",phylotype=""):
 
         self.name = name
-        self.display_name = name
+        self.input_display_name = name
+        # self.display_name = name
 
         self.sample_date = "NA"
 
         self.date_dict = {}
         self.table_dict = {}       
         self.attribute_dict = {}
+
+        self.protected = False
 
         self.country = country
         #self.attribute_dict["adm1"] = "NA" this should just be in tree_fields now

@@ -5,6 +5,10 @@ import numpy as np
 import matplotlib.ticker as plticker
 import math
 
+try:
+    import civetfunks as cfunks
+except:
+    pass
 
 def summarise_dates(query_dict):
 

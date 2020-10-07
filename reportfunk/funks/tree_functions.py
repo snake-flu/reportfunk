@@ -18,6 +18,11 @@ import datetime as dt
 from collections import Counter
 from collections import defaultdict
 
+try:
+    import civetfunks as cfunks
+except:
+    pass
+
 thisdir = os.path.abspath(os.path.dirname(__file__))
 
 def find_tallest_tree(input_dir):
@@ -78,7 +83,7 @@ def default_labels(taxon_obj, custom_tip_fields):
     return display_name
 
 
-def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dict, private, custom_tip_fields, safety_level):
+def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dict, custom_tip_fields, safety_level):
     for k in tree.Objects:
         if k.branchType == 'leaf':
             name = k.name
@@ -164,7 +169,7 @@ def find_colour_dict(query_dict, trait, colour_scheme):
     
 def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level):
 
-    display_name(My_Tree, tree_name, inserted_node_dict, taxon_dict, query_dict, private, custom_tip_labels, safety_level) 
+    display_name(My_Tree, tree_name, inserted_node_dict, taxon_dict, query_dict, custom_tip_labels, safety_level) 
     My_Tree.uncollapseSubtree()
 
     if num_tips < 10:
@@ -334,7 +339,7 @@ def sort_trees_index(tree_dir):
         
     return c
 
-def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, private, tree_to_all_tip, tree_to_querys, inserted_node_dict,  safety_level=None, min_uk_taxa=3):
+def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, tree_to_all_tip, tree_to_querys, inserted_node_dict,  safety_level=None, min_uk_taxa=3):
 
     tallest_height = find_tallest_tree(input_dir)
 
@@ -767,8 +772,8 @@ def describe_collapsed_nodes(full_tax_dict, tree_name_stem, tree_dir, node_summa
                                 axs[nrow][i].set_title(relevant_nde, size=8)
                                 axs[nrow][i].set_xticklabels(x,rotation=70, size=5)
                                 # axs[nrow][i].set_yticklabels(y, size=5)
-                                axs[count].spines['top'].set_visible(False) ## make axes invisible
-                                axs[count].spines['right'].set_visible(False)
+                                axs[nrow][i].spines['top'].set_visible(False) ## make axes invisible
+                                axs[nrow][i].spines['right'].set_visible(False)
                             except IndexError:
                                 continue
 

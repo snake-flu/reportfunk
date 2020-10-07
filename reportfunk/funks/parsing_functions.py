@@ -47,6 +47,7 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
     tip_to_tree = {} #for finding which subtree the queries are in
     tree_to_all_tip = defaultdict(list) #for summarising trees when they are too big
     inserted_node_dict = defaultdict(dict) #for node summaries
+    protected_sequences = []
 
     for fn in os.listdir(tree_dir):
         all_tips = [] #for summarising trees when they are too big - contains subtrees
@@ -59,6 +60,7 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
                         present_in_tree.append(k.name)
                         all_tips.append(k.name)
                         tip_to_tree[k.name] = tree_name
+                        protected_sequences.append(k.name)
                     else:
                         in_collapsed = collapsed_node_dict[k.name]
                         present_in_tree.extend(in_collapsed)
@@ -94,7 +96,7 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
             
             tree_to_all_tip[tree_name] = all_tips
 
-    return present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict
+    return present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict, protected_sequences
 
 def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_fields, table_fields, database_date_column, virus="sars-cov-2"):
     
@@ -185,7 +187,7 @@ def UK_adm1(query_name, input_value):
     return adm1
 
 def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None, UK=False): 
-    
+
     new_query_dict = {}
     
     with open(input_csv, 'r') as f:
@@ -203,7 +205,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
             if name in query_id_dict.keys():
                 taxon = query_id_dict[name]
 
-                taxon.display_name_input = sequence[display_name]
+                taxon.input_display_name = sequence[display_name]
                 
                 for field in date_fields:
                     if field in reader.fieldnames:
@@ -247,7 +249,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
       
     return new_query_dict 
 
-def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, date_fields=None, virus="sars-cov-2"):
+def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences, date_fields=None, virus="sars-cov-2"):
 
     full_tax_dict = query_dict.copy()
 
@@ -272,17 +274,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 adm2 = ""
                 adm2_present_in_background = False
 
-            # if virus == "sars-cov-2":
-            #     uk_lineage = sequence["uk_lineage"]
-            #     global_lineage = sequence["lineage"]
-            #     phylotype = sequence["phylotype"]
-
             node_summary_trait = sequence[node_summary_option]
 
             if seq_name in present_in_tree and seq_name not in query_dict.keys():
-                # if virus == "sars-cov-2":
-                #     new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields, global_lineage=global_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
-                # else:
+
                 new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields)
                 
                 if date == "":
@@ -291,10 +286,14 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 new_taxon.sample_date = date
                 new_taxon.node_summary = node_summary_trait
 
+                if new_taxon.name in protected_sequences:
+                    new_taxon.protected = True
+
                 if seq_name in tip_to_tree.keys():
                     new_taxon.tree = tip_to_tree[seq_name]
 
                 new_taxon.attribute_dict["adm2"] = adm2
+                new_taxon.input_display_name = seq_name
 
                 full_tax_dict[seq_name] = new_taxon
 
@@ -342,7 +341,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
 def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, database_sample_date_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, virus="sars-cov-2", UK=False):
 
-    present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict = parse_tree_tips(treedir, collapsed_node_file)
+    present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict, protected_sequences = parse_tree_tips(treedir, collapsed_node_file)
     
     #parse the metadata with just those queries found in cog
     query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column, virus=virus) 
@@ -351,7 +350,7 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
     
     #parse the full background metadata
-    full_tax_dict, adm2_present_in_background = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, date_fields, virus=virus)
+    full_tax_dict, adm2_present_in_background = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, date_fields, virus=virus)
 
     return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background   
 
