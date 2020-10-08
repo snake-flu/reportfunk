@@ -187,7 +187,8 @@ def UK_adm1(query_name, input_value):
     return adm1
 
 def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None, UK=False): 
-
+    
+    full_query_count = 0
     new_query_dict = {}
     
     with open(input_csv, 'r') as f:
@@ -199,7 +200,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
         for sequence in in_data:
-            
+            full_query_count += 1
             name = sequence[input_column]
 
             if name in query_id_dict.keys():
@@ -247,7 +248,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                 new_query_dict[taxon.name] = taxon
 
       
-    return new_query_dict 
+    return new_query_dict, full_query_count 
 
 def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences, date_fields=None, virus="sars-cov-2"):
 
@@ -347,12 +348,12 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column, virus=virus) 
 
     #Any query information they have provided
-    query_dict = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
+    query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
     
     #parse the full background metadata
     full_tax_dict, adm2_present_in_background = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, date_fields, virus=virus)
 
-    return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background   
+    return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background, full_query_count   
 
 def investigate_QC_fails(QC_file):
 

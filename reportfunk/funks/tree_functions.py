@@ -56,7 +56,7 @@ def find_tallest_tree(input_dir):
     max_height = sorted(tree_heights, reverse=True)[0]
     return max_height
 
-def default_labels(taxon_obj, custom_tip_fields):
+def default_labels(taxon_obj, query_dict, custom_tip_fields):
 
     date = taxon_obj.sample_date
     
@@ -72,7 +72,7 @@ def default_labels(taxon_obj, custom_tip_fields):
 
     count = 0
     if custom_tip_fields: 
-        if name in query_dict.keys(): 
+        if taxon_obj.name in query_dict.keys(): 
             for label_element in custom_tip_fields:
                 if count == 0:
                     display_name = taxon_obj.display_name
@@ -552,7 +552,7 @@ def summarise_node_table(tree_dir, focal_tree, full_tax_dict):
 
                     if taxon_obj.country == "UK":
                         if "adm2" in taxon_obj.attribute_dict.keys():
-                            if taxon_obj.attribute_dict["adm2"] != "":
+                            if taxon_obj.attribute_dict["adm2"] != "" and taxon_obj.attribute_dict["adm2"] != "NA":
                                 adm2_present.append(taxon_obj.attribute_dict["adm2"])
             
             if len(adm2_present) != 0:
