@@ -154,6 +154,13 @@ def get_snakefile(thisdir):
         sys.exit(-1)
     return snakefile
 
+def get_cluster_snakefile(thisdir):
+    snakefile = os.path.join(thisdir, 'scripts','cluster_civet.smk')
+    if not os.path.exists(snakefile):
+        sys.stderr.write(cyan(f'Error: cannot find Snakefile at {snakefile}\n Check installation\n'))
+        sys.exit(-1)
+    return snakefile
+
 def get_query_fasta(fasta_arg,cwd,config):
 
     if fasta_arg:
