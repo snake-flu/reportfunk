@@ -385,6 +385,8 @@ def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
             splits = item.split("=")
         elif ":" in item:
             splits = item.split(":")
+        else:
+            splits = [item]        
         key = splits[0].replace(" ","")
         if key in column_names or key in background_metadata_headers:
             if len(splits) == 1:
