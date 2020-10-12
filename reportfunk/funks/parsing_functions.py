@@ -186,7 +186,7 @@ def UK_adm1(query_name, input_value):
 
     return adm1
 
-def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None, UK=False): 
+def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None): 
     
     full_query_count = 0
     new_query_dict = {}
@@ -232,7 +232,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                             if sequence[col] != "":
                                 taxon.attribute_dict[col] = sequence[col]
                         
-                        if UK:
+                        if taxon.country == "UK": 
                             if col == "adm1":
                                 adm1 = UK_adm1(name, sequence[col])
                                 taxon.attribute_dict["adm1"] = adm1
@@ -340,7 +340,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                     
     return full_tax_dict, adm2_present_in_background
 
-def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, database_sample_date_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, virus="sars-cov-2", UK=False):
+def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, database_sample_date_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, virus="sars-cov-2"):
 
     present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict, protected_sequences = parse_tree_tips(treedir, collapsed_node_file)
     
@@ -348,7 +348,7 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column, virus=virus) 
 
     #Any query information they have provided
-    query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, UK=UK)
+    query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict)
     
     #parse the full background metadata
     full_tax_dict, adm2_present_in_background = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, date_fields, virus=virus)
