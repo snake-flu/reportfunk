@@ -210,6 +210,13 @@ def get_outdir(outdir_arg,output_prefix_arg,cwd,config,default_dict):
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
+    report_output = os.path.join(outdir, "report")
+    if not os.path.exists(report_output):
+        os.mkdir(report_output)
+    figure_output = os.path.join(report_output, "figures")
+    if not os.path.exists(figure_output):
+        os.mkdir(figure_output)
+
     print(green(f"Output dir:") + f" {outdir}")
     config["outdir"] = outdir 
     config["rel_outdir"] = os.path.join(".",rel_outdir) 
