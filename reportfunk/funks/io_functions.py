@@ -312,16 +312,17 @@ def qc_list_inputs(config_key, column_names,config):
 def check_date_format(date_string,config_key=None,row_number=None,column_name=None):
     date_format = '%Y-%m-%d'
     check_date= ""
-    try:
-        check_date = datetime.strptime(date_string, date_format).date()
-    except:
-        if row_number and column_name:
-            sys.stderr.write(cyan(f"Error: Metadata field `{date_string}` [at column: {column_name}, row: {row_number}] contains unaccepted date format\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
-        else:
-            sys.stderr.write(cyan(f"Error: Input '{config_key}' is the wrong date format.\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+    if date_string != "" and date_string != "NA":
+        try:
+            check_date = datetime.strptime(date_string, date_format).date()
+        except:
+            if row_number and column_name:
+                sys.stderr.write(cyan(f"Error: Metadata field `{date_string}` [at column: {column_name}, row: {row_number}] contains unaccepted date format\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+            else:
+                sys.stderr.write(cyan(f"Error: Input '{config_key}' is the wrong date format.\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
 
-        sys.exit(-1)
-        
+            sys.exit(-1)
+            
     
     return check_date
 

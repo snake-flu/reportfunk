@@ -16,10 +16,10 @@ def convert_date(date_string):
     try:
         bits = date_string.split("-")
         date_dt = dt.date(int(bits[0]),int(bits[1]), int(bits[2]))
+        return date_dt
     except ValueError:
         print("The wrong date format was supplied. Please re-run with YYYY-MM-DD")
     
-    return date_dt
 
 def parse_collapsed_nodes(collapsed_node_file):
 
@@ -210,7 +210,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                 
                 for field in date_fields:
                     if field in reader.fieldnames:
-                        if sequence[field] != "":
+                        if sequence[field] != "" and sequence[field] != "NA":
                             date_dt = convert_date(sequence[field])
                             taxon.date_dict[field] = date_dt 
 
@@ -302,7 +302,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
             #Remember, then name has to match fully, so if it's not the x/y/z name this section won't work
             if seq_name in query_dict.keys(): 
                 tax_object = query_dict[seq_name]
-                if tax_object.sample_date == "NA" and date != "":
+                if tax_object.sample_date == "NA" and date != "" and date != "NA":
                     tax_object.sample_date = date
                     tax_object.all_dates.append(convert_date(date))
                 
@@ -311,7 +311,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
                 for field in date_fields:
                     if field in reader.fieldnames:
-                        if sequence[field] != "" and field not in tax_object.date_dict.keys():
+                        if sequence[field] != "" and sequence[field] != "NA" and field not in tax_object.date_dict.keys():
                             date_dt = convert_date(sequence[field])
                             tax_object.date_dict[field] = date_dt 
                     
