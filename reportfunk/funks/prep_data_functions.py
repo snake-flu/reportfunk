@@ -34,7 +34,7 @@ def analyse_inputs(inputs):
     if len(graphic_dict) > 1:
         print(",".join(list(graphic_dict.keys())) + " fields are displayed graphically using " + ",".join(list(graphic_dict.values())) + " colour schemes respectively.")
     else:
-        print(",".join(list(graphic_dict.keys())) + "is shown graphically on the tree using " + ",".join(list(graphic_dict.values())) + "as the colour scheme.")
+        print(",".join(list(graphic_dict.keys())) + " is shown graphically on the tree using " + ",".join(list(graphic_dict.values())) + " as the colour scheme.")
     
     if label_fields:
         print("Labelling by " + ",".join(label_fields) + " on the tree.")

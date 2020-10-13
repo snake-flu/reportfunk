@@ -68,7 +68,7 @@ def find_colour_dict(date_fields):
 
     return colour_dict
 
-def plot_time_series(tips, query_dict, overall_max_date, overall_min_date, date_fields, custom_tip_fields, safety_level=None):
+def plot_time_series(tips, query_dict, overall_max_date, overall_min_date, date_fields, custom_tip_fields, tree_name, figdir, safety_level=None):
 
     colour_dict = find_colour_dict(date_fields)    
 
@@ -90,7 +90,6 @@ def plot_time_series(tips, query_dict, overall_max_date, overall_min_date, date_
         offset = dt.timedelta(time_len/10)
     else:
         offset = dt.timedelta(time_len/3)
-
 
     count = 1
 
@@ -155,6 +154,7 @@ def plot_time_series(tips, query_dict, overall_max_date, overall_min_date, date_
 
     fig.tight_layout()
 
+    plt.savefig(figdir + "/" + tree_name + "_time_plot.svg", format="svg")
 
 
 

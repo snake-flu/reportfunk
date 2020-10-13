@@ -167,7 +167,7 @@ def find_colour_dict(query_dict, trait, colour_scheme):
         return colour_dict
 
     
-def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level):
+def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level, figdir):
 
     display_name(My_Tree, tree_name, inserted_node_dict, taxon_dict, query_dict, custom_tip_labels, safety_level) 
     My_Tree.uncollapseSubtree()
@@ -324,6 +324,7 @@ def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_di
 
     fig.tight_layout()
 
+    plt.savefig(figdir + "/" + tree_name + ".svg", format="svg")
 
 def sort_trees_index(tree_dir):
     b_list = []
@@ -339,7 +340,7 @@ def sort_trees_index(tree_dir):
         
     return c
 
-def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, tree_to_all_tip, tree_to_querys, inserted_node_dict,  safety_level=None, min_uk_taxa=3):
+def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, desired_fields, custom_tip_labels, graphic_dict, tree_to_all_tip, tree_to_querys, inserted_node_dict, svg_figdir,  safety_level=None, min_uk_taxa=3):
 
     tallest_height = find_tallest_tree(input_dir)
 
@@ -393,19 +394,19 @@ def make_all_of_the_trees(input_dir, tree_name_stem, taxon_dict, query_dict, des
             for k in tree.Objects:
                 if k.branchType == 'leaf':
                     tips.append(k.name)
+
+            overall_tree_count += 1      
             
             if len(tips) < 500:
-
                 df_dict = summarise_node_table(input_dir, treename, taxon_dict)
-
                 overall_df_dict[treename] = df_dict
-
-                overall_tree_count += 1      
                 
-                make_scaled_tree(tree, treename, inserted_node_dict, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level)     
+                make_scaled_tree(tree, treename, inserted_node_dict, len(tips), colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level, svg_figdir)     
             
             else:
-                too_tall_trees.append(tree_number)
+                fig,ax = plt.subplots(1,1)
+                ax.text(0.3,0.5,"Tree to large to be rendered")
+                too_tall_trees.append(treename)
                 tips = tree_to_all_tip[treename]
                 too_large_tree_dict = summarise_large_tree(tips, treename, query_dict, taxon_dict, too_large_tree_dict, tree_to_querys)
                 
