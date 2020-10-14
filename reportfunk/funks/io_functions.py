@@ -408,7 +408,7 @@ def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
                 output.append(key + ":" + default_value)
             else:
                 value = splits[1]
-                if value in value_check or value == default_value:
+                if value in value_check or value == default_value or value == "default":
                     output.append(key + ":" + value)
                 else:
                     sys.stderr.write(cyan(f"Error: {value} not compatible\n"))
@@ -559,7 +559,6 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
             reader = csv.DictReader(f)
             for row in reader:
                 queries.append(row[config["input_column"]])
-                
         do_not_run = []
         run = []
         for record in SeqIO.parse(fasta, "fasta"):

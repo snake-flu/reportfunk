@@ -136,35 +136,16 @@ def find_colour_dict(query_dict, trait, colour_scheme):
         for query in query_dict.values():
             attribute_options.add(query.attribute_dict[trait])
 
-    if colour_scheme == "default":     
-        if len(attribute_options) == 2:
-            options = sorted(list(attribute_options))
-            colour_dict = {options[0]: "indianred",
-                            options[1]:"steelblue"}
-            if "NA" in options:
-                colour_dict["NA"] = "dimgrey"
-            return colour_dict
-
-        elif len(attribute_options) == 3:
-            options = sorted(list(attribute_options))
-            colour_dict = {options[0]: "darkseagreen",
-                            options[1]:"indianred",
-                            options[2]:"steelblue"}
-            if "NA" in options:
-                colour_dict["NA"] = "dimgrey"
-            return colour_dict
-
-    else:
-        #get the right number of colours, then loop through the set
-        colour_dict = {}
-        count = 0
-        colors = cmap(np.linspace(0, 1, len(attribute_options)))
-        for option in sorted(attribute_options):
-            colour_dict[option] = colors[count]
-            count += 1
-        if "NA" in attribute_options:
-            colour_dict["NA"] = "dimgrey"
-        return colour_dict
+    #get the right number of colours, then loop through the set
+    colour_dict = {}
+    count = 0
+    colors = cmap(np.linspace(0, 1, len(attribute_options)))
+    for option in sorted(attribute_options):
+        colour_dict[option] = colors[count]
+        count += 1
+    if "NA" in attribute_options:
+        colour_dict["NA"] = "dimgrey"
+    return colour_dict
 
     
 def make_scaled_tree(My_Tree, tree_name, inserted_node_dict, num_tips, colour_dict_dict, desired_fields, tallest_height, taxon_dict, query_dict, custom_tip_labels, graphic_dict, safety_level, figdir):
@@ -475,7 +456,8 @@ def summarise_collapsed_node_for_label(inserted_node_dict, focal_node, focal_tre
         if tax in full_tax_dict.keys():
             taxon_obj = full_tax_dict[tax]
             try:
-                summaries.append(taxon_obj.node_summary)
+                if taxon_obj.node_summary != "" and taxon_obj.node_summary != "NA":
+                    summaries.append(taxon_obj.node_summary)
             except: #this is to fill in for the not working jclusterfunc
                 pass
 

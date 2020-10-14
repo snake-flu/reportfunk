@@ -123,46 +123,47 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             closest_distance = sequence["SNPdistance"]
             snps = sequence['SNPs']
 
-            if virus == "sars-cov-2": #also uk_lineage and phylotype are UK specific, but it has it in llama so leave it for now
-                if "lineage" in headers:
-                    glob_lineage = sequence['lineage']
-                else:
-                    glob_lineage = ""
-                if "uk_lineage" in headers:
-                    uk_lineage = sequence['uk_lineage']
-                else:
-                    uk_lineage = ""
-                if "phylotype" in headers:
-                    phylotype = sequence["phylotype"]
-                else:
-                    phylotype = ""
-                
-                #do we want table fields in llama? probably yes
-                new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields, global_lineage=glob_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
-           
-            else:
-                new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields)
-
-            new_taxon.query_id = query_id
-
-            if query_name == closest_name: #if it's in database, get its sample date
-                new_taxon.in_db = True
-                new_taxon.sample_date = sample_date
-                new_taxon.closest = "NA"
-
-            else:
-                new_taxon.closest = closest_name
-                new_taxon.closest_distance = closest_distance
-                new_taxon.snps = snps
-                
+            if query_id not in query_id_dict: #it's in the fasta file and in the db, this should take the db
+                if virus == "sars-cov-2": #also uk_lineage and phylotype are UK specific, but it has it in llama so leave it for now
+                    if "lineage" in headers:
+                        glob_lineage = sequence['lineage']
+                    else:
+                        glob_lineage = ""
+                    if "uk_lineage" in headers:
+                        uk_lineage = sequence['uk_lineage']
+                    else:
+                        uk_lineage = ""
+                    if "phylotype" in headers:
+                        phylotype = sequence["phylotype"]
+                    else:
+                        phylotype = ""
+                    
+                    #do we want table fields in llama? probably yes
+                    new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields, global_lineage=glob_lineage, uk_lineage=uk_lineage, phylotype=phylotype)
             
-            relevant_tree = tip_to_tree[query_name]
-            new_taxon.tree = relevant_tree
+                else:
+                    new_taxon = taxon(query_name, country, label_fields, tree_fields, table_fields)
 
-            tree_to_tip[relevant_tree].append(new_taxon)
-           
-            query_dict[query_name] = new_taxon
-            query_id_dict[query_id] = new_taxon
+                new_taxon.query_id = query_id
+
+                if query_name == closest_name: #if it's in database, get its sample date
+                    new_taxon.in_db = True
+                    new_taxon.sample_date = sample_date
+                    new_taxon.closest = "NA"
+
+                else:
+                    new_taxon.closest = closest_name
+                    new_taxon.closest_distance = closest_distance
+                    new_taxon.snps = snps
+                    
+                
+                relevant_tree = tip_to_tree[query_name]
+                new_taxon.tree = relevant_tree
+
+                tree_to_tip[relevant_tree].append(new_taxon)
+            
+                query_dict[query_name] = new_taxon
+                query_id_dict[query_id] = new_taxon
             
     return query_dict, query_id_dict, tree_to_tip
 
@@ -275,7 +276,13 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 adm2 = ""
                 adm2_present_in_background = False
 
-            node_summary_trait = sequence[node_summary_option]
+            if node_summary_option == "adm2":
+                if country != "UK":
+                    node_summary_trait = country 
+                else:
+                    node_summary_trait = sequence["adm2"] 
+            else:
+                node_summary_trait = sequence[node_summary_option]
 
             if seq_name in present_in_tree and seq_name not in query_dict.keys():
 
@@ -296,7 +303,14 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 new_taxon.attribute_dict["adm2"] = adm2
                 new_taxon.input_display_name = seq_name
 
+                for field in label_fields:
+                    if field in col_names:
+                        if sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
+                            new_taxon.attribute_dict[field] = sequence[field]
+
                 full_tax_dict[seq_name] = new_taxon
+
+            
 
             #There may be sequences not in COG tree but that are in the full metadata, so we want to pull out the additional information if it's not in the input csv
             #Remember, then name has to match fully, so if it's not the x/y/z name this section won't work
@@ -315,10 +329,6 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                             date_dt = convert_date(sequence[field])
                             tax_object.date_dict[field] = date_dt 
                     
-                for field in label_fields:
-                    if field in col_names:
-                        if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
-                                tax_object.attribute_dict[field] = sequence[field]
 
                 for field in tree_fields:
                     if field in col_names:
@@ -329,6 +339,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                                 adm1 = UK_adm1(tax_object.name,sequence[field])
                                 tax_object.attribute_dict[field] = adm1
 
+                for field in label_fields:
+                    if field in col_names:
+                        if new_taxon.attribute_dict[field] == "NA" and sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
+                                tax_object.attribute_dict[field] = sequence[field]
 
                 for field in table_fields:
                     if field in col_names:
@@ -355,7 +369,7 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
 
     return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background, full_query_count   
 
-def investigate_QC_fails(QC_file):
+def investigate_QC_fails(QC_file, input_column):
 
     fail_dict = {}
 
@@ -363,7 +377,7 @@ def investigate_QC_fails(QC_file):
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
         for sequence in in_data:
-            name = sequence["name"]
+            name = sequence[input_column]
             reason = sequence["reason_for_failure"]
 
             if "seq_len" in reason:
