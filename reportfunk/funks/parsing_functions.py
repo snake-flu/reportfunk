@@ -106,11 +106,11 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
 
     tree_to_tip = defaultdict(list)
 
-    with open(metadata_file, "r") as f:
+    with open(metadata_file, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         headers = reader.fieldnames   
 
-    with open(metadata_file, "r") as f:
+    with open(metadata_file, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
         for sequence in in_data:

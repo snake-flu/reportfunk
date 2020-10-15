@@ -338,15 +338,20 @@ def check_date_format(date_string,config_key=None,row_number=None,column_name=No
     
     return check_date
 
-def check_date_columns(query, metadata, date_column_list):
+def check_date_columns(config, date_column_list):
 
-    with open(query) as f:
-        reader = csv.DictReader(f)
-        query_header = reader.fieldnames
+    metadata_header = config["background_metadata_header"]
+    query = config["query"]
+    query_header = config["query_metadata_header"]
+    metadata = config["background_metadata"]
 
-    with open(metadata) as f:
-        reader = csv.DictReader(f)
-        metadata_header = reader.fieldnames
+    # with open(query) as f:
+    #     reader = csv.DictReader(f)
+    #     query_header = reader.fieldnames
+
+    # with open(metadata, "r", encoding = "utf-8") as f:
+    #     reader = csv.DictReader(f)
+    #     metadata_header = reader.fieldnames
     
     with open(query) as f:
         reader = csv.DictReader(f)
@@ -358,7 +363,7 @@ def check_date_columns(query, metadata, date_column_list):
                     row_num +=1
                     check_date_format(line[col],row_num, col)
 
-    with open(metadata) as f:
+    with open(metadata, "r", encoding = "utf-8") as f:
         reader = csv.DictReader(f)
         data = [r for r in reader]
         for col in date_column_list:
@@ -372,7 +377,7 @@ def check_metadata_for_search_columns(config,default_dict):
 
     data_column = config["data_column"]
     
-    with open(config["background_metadata"],"r") as f:
+    with open(config["background_metadata"],"r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         header = reader.fieldnames
         if data_column not in header:
@@ -483,7 +488,7 @@ def check_label_and_tree_and_date_fields(config, default_dict):
     date_field_str = qc_list_inputs("date_fields", column_names,config)
     
     if date_field_str:
-        check_date_columns(config["query"], metadata, date_field_str.split(",")) 
+        check_date_columns(config, date_field_str.split(",")) 
 
     graphic_dict_output = qc_dict_inputs("colour_by", default_dict,column_names, acceptable_colours, config)
 
@@ -622,7 +627,7 @@ def get_dict_of_metadata_filters(arg_type,to_parse, metadata):
 
     if not type(to_parse)==list:
         to_parse = to_parse.split(" ")
-    with open(metadata, newline="") as f:
+    with open(metadata, newline="",encoding = "utf-8") as f:
         reader = csv.DictReader(f)
         column_names = reader.fieldnames
         
@@ -651,7 +656,7 @@ def parse_date_range(metadata,column_name,to_search,rows_to_search):
     end_date = datetime.strptime(date_range[1], "%Y-%m-%d").date()
 
     if rows_to_search == []:
-        with open(metadata, newline="") as f:
+        with open(metadata, newline="", encoding = "utf-8") as f:
             reader = csv.DictReader(f)
             c =0
             for row in reader:
@@ -678,7 +683,7 @@ def parse_date_range(metadata,column_name,to_search,rows_to_search):
 
 def parse_general_field(metadata,column_name,to_search,rows_to_search):
     if rows_to_search == []:
-        with open(metadata, newline="") as f:
+        with open(metadata, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             c =0
             for row in reader:
