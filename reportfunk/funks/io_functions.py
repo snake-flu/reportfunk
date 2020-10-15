@@ -62,6 +62,14 @@ def type_input_file(input_arg,cwd,config):
 
     return query,configfile
     
+def parse_yaml_file(configfile,config):
+    with open(configfile,"r") as f:
+        input_config = yaml.load(f, Loader=yaml.FullLoader)
+        for key in input_config:
+            snakecase_key = key.replace("-","_")
+            if snakecase_key not in ["report_date"]:
+                config[snakecase_key] = input_config[key]
+    
 def make_csv_from_ids(id_list, config):
     query = os.path.join(config["outdir"], "query.csv")
     with open(query,"w") as fw:
@@ -75,16 +83,7 @@ def make_csv_from_ids(id_list, config):
         print(green(f"Number of IDs:") + f" {c}")
     return query
 
-def parse_yaml_file(configfile,config):
-    with open(configfile,"r") as f:
-        input_config = yaml.load(f, Loader=yaml.FullLoader)
-        for key in input_config:
-            snakecase_key = key.replace("-","_")
 
-            if not snakecase_key in config:
-                config[snakecase_key] = input_config[key]
-
-    return config
 
 def check_query_file(query, cwd, config):
     queryfile = ""
@@ -181,10 +180,20 @@ def get_query_fasta(fasta_arg,cwd,config):
     
     config["fasta"] = fasta 
 
-def get_outdir(outdir_arg,output_prefix_arg,cwd,config,default_dict):
+def make_timestamped_outdir(outdir,config):
+
+    output_prefix = config["output_prefix"]
+    timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
+    outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
+    rel_outdir = os.path.join(".",timestamp)
+
+    return outdir, rel_outdir
+
+
+def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
     outdir = ''
     
-    output_prefix = check_arg_config_default("output_prefix",output_prefix_arg, config, default_dict)
+    add_arg_to_config("output_prefix",output_prefix_arg, config)
     
 
     if outdir_arg:
@@ -192,16 +201,16 @@ def get_outdir(outdir_arg,output_prefix_arg,cwd,config,default_dict):
         outdir = os.path.join(cwd,expanded_path)
         rel_outdir = os.path.relpath(outdir, cwd) 
 
+    elif config["update"] or config["cluster"]:
+        outdir, rel_outdir = make_timestamped_outdir(outdir,config)
+
     elif "outdir" in config:
         expanded_path = os.path.expanduser(config["outdir"])
         outdir = os.path.join(config["path_to_query"],expanded_path)
         rel_outdir = os.path.relpath(outdir, cwd) 
 
     else:
-        timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
-        outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
-        
-        rel_outdir = os.path.join(".",timestamp)
+        outdir, rel_outdir = make_timestamped_outdir(outdir,config)
     
     today = date.today()
     d = today.strftime("%Y-%m-%d")
@@ -529,15 +538,9 @@ def collapse_summary_path_to_config(config):
     path = os.path.join(config["outdir"],"catchment_trees", "tree_collapsed_nodes.csv")
     config["collapse_summary"] = path
 
-def check_arg_config_default(key,arg,config,default):
-    new_str = ""
+def add_arg_to_config(key,arg,config):
     if arg:
-        new_str = arg
-    elif key in config:
-        new_str = config[key]
-    else:
-        new_str = default[key]
-    return new_str
+        config[key] = arg
 
 def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
     post_qc_query = ""
