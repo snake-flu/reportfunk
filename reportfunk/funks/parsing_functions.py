@@ -141,8 +141,10 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
                     new_taxon.closest_distance = closest_distance
                     new_taxon.snps = snps
                     
-                
-                relevant_tree = tip_to_tree[query_name]
+                if query_name in tip_to_tree:
+                    relevant_tree = tip_to_tree[query_name]
+                else:
+                    relevant_tree = "NA"
                 new_taxon.tree = relevant_tree
 
                 tree_to_tip[relevant_tree].append(new_taxon)
@@ -243,7 +245,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
       
     return new_query_dict, full_query_count 
 
-def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences, date_fields=None, virus="sars-cov-2"):
+def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences, date_fields, virus):
 
     full_tax_dict = query_dict.copy()
 
