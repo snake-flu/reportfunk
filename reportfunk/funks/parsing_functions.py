@@ -170,7 +170,7 @@ def UK_adm1(query_name, input_value):
 
     return adm1
 
-def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None, reinfection=False, patient_id_col=False): 
+def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None, patient_id_col=None, reinfection=False): 
     
     full_query_count = 0
     new_query_dict = {}
@@ -190,6 +190,9 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
             if name in query_id_dict.keys():
                 taxon = query_id_dict[name]
 
+                if reinfection:
+                    taxon.attribute_dict["patient"] = sequence[patient_id_col]
+                    
                 taxon.input_display_name = sequence[display_name]
 
                 if reinfection:
@@ -348,7 +351,7 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column) 
 
     #Any query information they have provided
-    query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, reinfection=reinfection, patient_id_col=patient_id_col)
+    query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, patient_id_col=patient_id_col, reinfection=reinfection)
     
     #parse the full background metadata
     full_tax_dict, adm2_present_in_background = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, date_fields)
