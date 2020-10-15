@@ -183,19 +183,18 @@ def get_query_fasta(fasta_arg,cwd,config):
 def make_timestamped_outdir(outdir,config):
 
     output_prefix = config["output_prefix"]
+
     timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
     outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
     rel_outdir = os.path.join(".",timestamp)
 
     return outdir, rel_outdir
 
-
 def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
     outdir = ''
     
     add_arg_to_config("output_prefix",output_prefix_arg, config)
     
-
     if outdir_arg:
         expanded_path = os.path.expanduser(outdir_arg)
         outdir = os.path.join(cwd,expanded_path)
@@ -236,18 +235,21 @@ def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     if no_temp_arg:
         print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
         tempdir = outdir
-    elif "no_temp" in config:
+        config["no_temp"] = no_temp_arg
+    elif config["no_temp"]:
         print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
         tempdir = outdir
     elif tempdir_arg:
-        to_be_dir = os.path.join(cwd, tempdir_arg)
+        expanded_path = os.path.expanduser(tempdir_arg)
+        to_be_dir = os.path.join(cwd,expanded_path)
         if not os.path.exists(to_be_dir):
             os.mkdir(to_be_dir)
         temporary_directory = tempfile.TemporaryDirectory(suffix=None, prefix=None, dir=to_be_dir)
         tempdir = temporary_directory.name
 
     elif "tempdir" in config:
-        to_be_dir = os.path.join(cwd, config["tempdir"])
+        expanded_path = os.path.expanduser(config["tempdir"])
+        to_be_dir = os.path.join(cwd,expanded_path)
         if not os.path.exists(to_be_dir):
             os.mkdir(to_be_dir)
         temporary_directory = tempfile.TemporaryDirectory(suffix=None, prefix=None, dir=to_be_dir)
@@ -365,7 +367,7 @@ def check_date_columns(query, metadata, date_column_list):
                     row_num +=1
                     check_date_format(line[col],row_num, col)
 
-def check_metadata_for_search_columns(config,default_dict):
+def check_metadata_for_search_columns(config):
 
     data_column = config["data_column"]
     
@@ -380,14 +382,11 @@ def check_metadata_for_search_columns(config,default_dict):
     config["data_column"] = data_column
 
 def data_columns_to_config(args,config,default_dict):
-
     ## input_column
-    input_column = check_arg_config_default("input_column",args.input_column, config, default_dict)
-    config["input_column"] = input_column
+    qcfunk.add_arg_to_config("input_column",args.input_column, config)
 
     ## data_column
-    data_column = check_arg_config_default("data_column",args.data_column, config, default_dict)
-    config["data_column"] = data_column
+    qcfunk.add_arg_to_config("data_column",args.data_column, config)
 
 def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
 
@@ -712,6 +711,16 @@ def filter_down_metadata(query_dict,metadata):
     return rows_to_search
 
 
+def from_metadata_checks(config):
+    if "query" in config:
+        if config["query"]:
+            sys.stderr.write(qcfunk.cyan('Error: please specifiy either -fm/--from-metadata or an input csv/ID string.\n'))
+            sys.exit(-1)
+    elif "fasta" in config:
+        if config["fasta"]:
+            sys.stderr.write(qcfunk.cyan('Error: fasta file option cannot be used in conjunction with -fm/--from-metadata.\nPlease specifiy an input csv with your fasta file.\n'))
+            sys.exit(-1)
+
 def generate_query_from_metadata(from_metadata, metadata, config):
 
     print(green("From metadata:"))
@@ -749,7 +758,7 @@ def generate_query_from_metadata(from_metadata, metadata, config):
             sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nExiting\n"))
             sys.exit(-1)
         print(green(f"Number of sequences matching defined query:") + f" {count}")
-        if len(query_ids) < 100:
+        if len(query_ids) < 50:
             for i in query_ids:
                 print(f" - {i}")
     return query
