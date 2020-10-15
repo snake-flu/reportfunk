@@ -1,6 +1,7 @@
 
 import datetime as dt
 
+
 def convert_date(date_string):
     bits = date_string.split("-")
     date_dt = dt.date(int(bits[0]),int(bits[1]), int(bits[2]))
@@ -16,6 +17,7 @@ class taxon():
         # self.display_name = name
 
         self.sample_date = "NA"
+        self.epiweek = "NA"
 
         self.date_dict = {}
         self.table_dict = {}       

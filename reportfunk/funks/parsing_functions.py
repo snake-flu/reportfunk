@@ -9,6 +9,7 @@ import os
 import datetime as dt
 import math
 import matplotlib.pyplot as plt
+from epiweeks import Week,Year
 
 from reportfunk.funks.class_definitions import taxon,lineage
 
@@ -132,6 +133,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
                 if query_name == closest_name: #if it's in database, get its sample date
                     new_taxon.in_db = True
                     new_taxon.sample_date = sample_date
+                    new_taxon.epiweek = Week.fromdate(convert_date(sample_date))
                     new_taxon.closest = "NA"
 
                 else:
@@ -207,6 +209,8 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                 if sample_date_column in col_names: #if it's not in the background database or there is no date in the background database but date is provided in the input query
                     if sequence[sample_date_column] != "":
                         taxon.sample_date = sequence[sample_date_column]
+                        taxon.epiweek = Week.fromdate(convert_date(sequence[sample_date_column]))
+
 
                 for col in col_names: #Add other metadata fields provided
                     if col in table_fields:
@@ -282,6 +286,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 
                 new_taxon.sample_date = date
                 new_taxon.node_summary = node_summary_trait
+                new_taxon.epiweek = Week.fromdate(convert_date(date))
 
                 if new_taxon.name in protected_sequences:
                     new_taxon.protected = True
@@ -307,7 +312,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 tax_object = query_dict[seq_name]
                 if tax_object.sample_date == "NA" and date != "" and date != "NA":
                     tax_object.sample_date = date
-                    tax_object.all_dates.append(convert_date(date))
+                    converted = convert_date(date)
+                    tax_object.all_dates.append(converted)
+                    tax_object.epiweek = Week.fromdate(converted)
+
                 
                 if "adm2" not in tax_object.attribute_dict.keys() and adm2 != "":
                     tax_object.attribute_dict["adm2"] = adm2
