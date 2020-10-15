@@ -331,7 +331,7 @@ def check_date_format(date_string,config_key=None,row_number=None,column_name=No
             if row_number and column_name:
                 sys.stderr.write(cyan(f"Error: Metadata field `{date_string}` [at column: {column_name}, row: {row_number}] contains unaccepted date format\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
             else:
-                sys.stderr.write(cyan(f"Error: Input '{config_key}' is the wrong date format.\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+                sys.stderr.write(cyan(f"Error: Input '{date_string}' is the wrong date format.\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
 
             sys.exit(-1)
             
