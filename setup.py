@@ -22,7 +22,8 @@ setup(name='reportfunk',
             "reportfunk/funks/table_functions.py"],
       install_requires=[
             "biopython>=1.70",
-            "matplotlib>=3.2.1"
+            "matplotlib>=3.2.1",
+            "epiweeks>=2.1.1"
         ],
       description='snipit',
       url='https://github.com/cov-ert/reportfunk',
