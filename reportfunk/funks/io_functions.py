@@ -38,9 +38,18 @@ def type_input_file(input_arg,cwd,config):
     query,configfile="",""
     if input_arg:
         if "," in input_arg or "." not in input_arg:
-            id_list = input_arg.split(",")
-            print(green(f"ID string detected"))
-            config["ids"] = id_list
+            
+            check_file = os.path.join(cwd,input_arg)
+            path_to_check_file = os.path.abspath(os.path.dirname(check_file))
+
+            if os.path.isfile(path_to_check_file):
+                sys.stderr.write(cyan(f"Error: -i,--input accepts either a `.csv` or `.yaml` file, or a comma-separated string of IDs\n"))
+                sys.exit(-1)
+
+            else:
+                id_list = input_arg.split(",")
+                print(green(f"ID string detected"))
+                config["ids"] = id_list
         else:
             input_file = os.path.join(cwd,input_arg)
             path_to_file = os.path.abspath(os.path.dirname(input_file))
