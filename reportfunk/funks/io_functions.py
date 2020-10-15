@@ -134,7 +134,7 @@ def check_background_for_queries(config,default_dict):
         for row in reader:
             queries.append(row[input_column])
     c = 0
-    with open(config["background_metadata"], "r") as f:
+    with open(config["background_metadata"], "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row[data_column] in queries:
