@@ -65,6 +65,9 @@ def type_input_file(input_arg,cwd,config):
                 print(green(f"Input file:") + f" {input_file}")
                 query = input_file
 
+            elif ending == "xls":
+                sys.stderr.write(cyan(f"Error: it looks like you've provided an excel file as input.\nPlease don't do this.\n-i,--input accepts either a csv or yaml file, or a comma-separated string of IDs\n"))
+                sys.exit(-1)
             else:
                 sys.stderr.write(cyan(f"Error: -i,--input accepts either a csv or yaml file, or a comma-separated string of IDs\n"))
                 sys.exit(-1)
