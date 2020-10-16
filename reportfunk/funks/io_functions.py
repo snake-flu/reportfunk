@@ -23,7 +23,8 @@ DIM = '\033[2m'
 def make_config_file(config_name, config):
     config_to_write = {}
     for k in config:
-        if k != "generate_config":
+        if k not in ["generate_config","tempdir","summary_dir","treedir",
+                    "collapse_summary","filtered_background_metadata","outfile"]:
             config_to_write[k] = config[k]
     config_out = os.path.join(config["outdir"],config_name)
     with open(config_out,"w") as fw:
@@ -67,8 +68,7 @@ def parse_yaml_file(configfile,config):
         input_config = yaml.load(f, Loader=yaml.FullLoader)
         for key in input_config:
             snakecase_key = key.replace("-","_")
-            if snakecase_key not in ["report_date"]:
-                config[snakecase_key] = input_config[key]
+            config[snakecase_key] = input_config[key]
     
 def make_csv_from_ids(id_list, config):
     query = os.path.join(config["outdir"], "query.csv")
@@ -184,7 +184,7 @@ def get_query_fasta(fasta_arg,cwd,config):
     
     config["fasta"] = fasta 
 
-def make_timestamped_outdir(outdir,config):
+def make_timestamped_outdir(cwd,outdir,config):
 
     output_prefix = config["output_prefix"]
 
@@ -205,7 +205,7 @@ def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
         rel_outdir = os.path.relpath(outdir, cwd) 
 
     elif config["update"] or config["cluster"]:
-        outdir, rel_outdir = make_timestamped_outdir(outdir,config)
+        outdir, rel_outdir = make_timestamped_outdir(cwd,outdir,config)
 
     elif "outdir" in config:
         expanded_path = os.path.expanduser(config["outdir"])
@@ -213,10 +213,11 @@ def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
         rel_outdir = os.path.relpath(outdir, cwd) 
 
     else:
-        outdir, rel_outdir = make_timestamped_outdir(outdir,config)
+        outdir, rel_outdir = make_timestamped_outdir(cwd,outdir,config)
     
     today = date.today()
     d = today.strftime("%Y-%m-%d")
+    output_prefix = config["output_prefix"]
     config["output_prefix"] = f"{output_prefix}_{d}"
 
     if not os.path.exists(outdir):
@@ -387,10 +388,10 @@ def check_metadata_for_search_columns(config):
 
 def data_columns_to_config(args,config):
     ## input_column
-    qcfunk.add_arg_to_config("input_column",args.input_column, config)
+    add_arg_to_config("input_column",args.input_column, config)
 
     ## data_column
-    qcfunk.add_arg_to_config("data_column",args.data_column, config)
+    add_arg_to_config("data_column",args.data_column, config)
 
 def qc_dict_inputs(config_key, value_check, config):
 
@@ -525,7 +526,7 @@ def check_table_fields(table_fields, snp_data, config):
     else:
         print(green(f"Not showing SNP information in table\n"))
 
-def check_summary_field(config_key, config, default_dict):
+def check_summary_field(config_key, config):
 
     column_names = config["background_metadata_header"]
 
@@ -737,11 +738,11 @@ def filter_down_metadata(query_dict,metadata):
 def from_metadata_checks(config):
     if "query" in config:
         if config["query"]:
-            sys.stderr.write(qcfunk.cyan('Error: please specifiy either -fm/--from-metadata or an input csv/ID string.\n'))
+            sys.stderr.write(cyan('Error: please specifiy either -fm/--from-metadata or an input csv/ID string.\n'))
             sys.exit(-1)
     elif "fasta" in config:
         if config["fasta"]:
-            sys.stderr.write(qcfunk.cyan('Error: fasta file option cannot be used in conjunction with -fm/--from-metadata.\nPlease specifiy an input csv with your fasta file.\n'))
+            sys.stderr.write(cyan('Error: fasta file option cannot be used in conjunction with -fm/--from-metadata.\nPlease specifiy an input csv with your fasta file.\n'))
             sys.exit(-1)
 
 def generate_query_from_metadata(from_metadata, metadata, config):
@@ -845,9 +846,9 @@ def collapse_config(collapse_threshold,config):
 
 def distance_config(distance,up_distance,down_distance,config):
 
-    qcfunk.add_arg_to_config("distance",distance, config)
-    qcfunk.add_arg_to_config("down_distance",down_distance, config)
-    qcfunk.add_arg_to_config("up_distance",up_distance, config)
+    add_arg_to_config("distance",distance, config)
+    add_arg_to_config("down_distance",down_distance, config)
+    add_arg_to_config("up_distance",up_distance, config)
 
     try:
         distance = int(config["distance"])

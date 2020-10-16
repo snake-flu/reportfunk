@@ -15,7 +15,7 @@ def make_title(config):
 
 def report_date(config):
     date = config["report_date"]
-    if date.startswith("Investigation started: "):
+    if str(date).startswith("Investigation started: "):
         report_date = config["report_date"]
     else:
         report_date = f'Investigation started: {date}'
