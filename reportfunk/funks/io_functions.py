@@ -39,9 +39,18 @@ def type_input_file(input_arg,cwd,config):
     query,configfile="",""
     if input_arg:
         if "," in input_arg or "." not in input_arg:
-            id_list = input_arg.split(",")
-            print(green(f"ID string detected"))
-            config["ids"] = id_list
+            
+            check_file = os.path.join(cwd,input_arg)
+            path_to_check_file = os.path.abspath(os.path.dirname(check_file))
+
+            if os.path.isfile(path_to_check_file):
+                sys.stderr.write(cyan(f"Error: -i,--input accepts either a `.csv` or `.yaml` file, or a comma-separated string of IDs\n"))
+                sys.exit(-1)
+
+            else:
+                id_list = input_arg.split(",")
+                print(green(f"ID string detected"))
+                config["ids"] = id_list
         else:
             input_file = os.path.join(cwd,input_arg)
             path_to_file = os.path.abspath(os.path.dirname(input_file))
@@ -57,6 +66,9 @@ def type_input_file(input_arg,cwd,config):
                 print(green(f"Input file:") + f" {input_file}")
                 query = input_file
 
+            elif ending == "xls":
+                sys.stderr.write(cyan(f"Error: it looks like you've provided an excel file as input.\nPlease don't do this.\n-i,--input accepts either a csv or yaml file, or a comma-separated string of IDs\n"))
+                sys.exit(-1)
             else:
                 sys.stderr.write(cyan(f"Error: -i,--input accepts either a csv or yaml file, or a comma-separated string of IDs\n"))
                 sys.exit(-1)
@@ -335,7 +347,7 @@ def check_date_format(date_string,config_key=None,row_number=None,column_name=No
             if row_number and column_name:
                 sys.stderr.write(cyan(f"Error: Metadata field `{date_string}` [at column: {column_name}, row: {row_number}] contains unaccepted date format\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
             else:
-                sys.stderr.write(cyan(f"Error: Input '{config_key}' is the wrong date format.\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
+                sys.stderr.write(cyan(f"Error: Input '{date_string}' is the wrong date format.\nPlease use format {date_format}, i.e. `YYYY-MM-DD`\n"))
 
             sys.exit(-1)
             
