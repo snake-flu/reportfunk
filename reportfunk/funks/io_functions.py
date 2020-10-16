@@ -111,7 +111,7 @@ def check_query_file(query, cwd, config):
         sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids in config (e.g. EPI12345,EPI23456) please provide them under keyword `ids`\n."))
         sys.exit(-1)
 
-def check_background_for_queries(config,default_dict):
+def check_background_for_queries(config):
 
     data_column = config["data_column"]
     input_column = config["input_column"]
@@ -132,7 +132,7 @@ def check_background_for_queries(config,default_dict):
         sys.exit(-1) 
 
 
-def check_query_for_input_column(config,default_dict):
+def check_query_for_input_column(config):
 
     input_column = config["input_column"]
     
@@ -166,13 +166,17 @@ def get_query_fasta(fasta_arg,cwd,config):
         fasta = os.path.join(cwd, fasta_arg)
 
     elif "fasta" in config:
-        fasta = os.path.join(config["path_to_query"], config["fasta"]) 
+        if config["fasta"]:
+            expanded_path = os.path.expanduser(config["fasta"])
+            fasta = os.path.join(config["path_to_query"], expanded_path) 
+        else:
+            fasta = ""
 
     else:
         fasta = ""
 
     if fasta:
-        if not os.path.exists(fasta):
+        if not os.path.isfile(fasta):
             sys.stderr.write(cyan(f'Error: cannot find fasta query at {fasta}\n'))
             sys.exit(-1)
         else:
@@ -379,24 +383,24 @@ def check_metadata_for_search_columns(config):
             sys.exit(-1)
 
     config["background_metadata_header"] = header
-    config["data_column"] = data_column
+    
 
-def data_columns_to_config(args,config,default_dict):
+def data_columns_to_config(args,config):
     ## input_column
     qcfunk.add_arg_to_config("input_column",args.input_column, config)
 
     ## data_column
     qcfunk.add_arg_to_config("data_column",args.data_column, config)
 
-def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
+def qc_dict_inputs(config_key, value_check, config):
 
     background_metadata_headers = config["background_metadata_header"]
-
+    column_names = config["query_metadata_header"]
     output = []
 
     input_to_check = config[config_key]
-    default_key = default_dict[config_key].split("=")[0] #if the len(dict) > 1 this will have to change
-    default_value = default_dict[config_key].split("=")[1]
+
+    default_value = "viridis"
 
     if type(input_to_check) == str: 
         sections = input_to_check.split(",") 
@@ -432,7 +436,7 @@ def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
     return output
 
 
-def check_label_and_tree_and_date_fields(config, default_dict):
+def check_label_and_tree_and_date_fields(config):
 
     metadata = config["background_metadata"]
     metadata_headers = config["background_metadata_header"]
@@ -481,7 +485,7 @@ def check_label_and_tree_and_date_fields(config, default_dict):
     if date_field_str:
         check_date_columns(config["query"], metadata, date_field_str.split(",")) 
 
-    graphic_dict_output = qc_dict_inputs("colour_by", default_dict,column_names, acceptable_colours, config)
+    graphic_dict_output = qc_dict_inputs("colour_by", acceptable_colours, config)
 
     for i in graphic_dict_output.split(","):
         element = i.split(":")[0]
@@ -508,7 +512,7 @@ def check_label_and_tree_and_date_fields(config, default_dict):
     # else:
     #     print(green(f'Using {sample_date_column} as sample date in query metadata'))
 
-def check_table_fields(table_fields, snp_data, config, default_dict):
+def check_table_fields(table_fields, snp_data, config):
     
     column_names = config["query_metadata_header"]
 
@@ -541,16 +545,13 @@ def add_arg_to_config(key,arg,config):
     if arg:
         config[key] = arg
 
-def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
+def input_file_qc(minlen_arg,maxambig_arg,config):
     post_qc_query = ""
     qc_fail = ""
     fasta = config["fasta"]
 
-    minlen = check_arg_config_default("min_length",minlen_arg,config,default_dict)
-    maxambig = check_arg_config_default("max_ambiguity",maxambig_arg,config,default_dict)
-
-    config["min_length"] = minlen
-    config["max_ambiguity"] = maxambig
+    add_arg_to_config("min_length",minlen_arg,config)
+    add_arg_to_config("max_ambiguity",maxambig_arg,config)
 
     num_seqs =0
 
@@ -561,17 +562,21 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
             reader = csv.DictReader(f)
             for row in reader:
                 queries.append(row[config["input_column"]])
+
         do_not_run = []
-        run = []
+        passed = []
+        
+        
+
         for record in SeqIO.parse(fasta, "fasta"):
-            if len(record) <minlen:
+            if len(record) < config["min_length"]:
                 record.description = record.description + f" fail=seq_len:{len(record)}"
                 do_not_run.append(record)
                 print(cyan(f"    - {record.id}\tsequence too short: Sequence length {len(record)}"))
             else:
                 num_N = str(record.seq).upper().count("N")
                 prop_N = round((num_N)/len(record.seq), 2)
-                if prop_N > maxambig: 
+                if prop_N > config["max_ambiguity"]: 
                     record.description = record.description + f" fail=N_content:{prop_N}"
                     do_not_run.append(record)
                     print(cyan(f"    - {record.id}\thas an N content of {prop_N}"))
@@ -581,8 +586,26 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
                         do_not_run.append(record)
                         print(cyan(f"    - {record.id}\tis not in query"))
                     else:
-                        run.append(record)
+                        passed.append(record)
         
+        passed_ids = [i.id for i in passed]
+        already_in_tree = []
+        with open(config["background_metadata"],"r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row[config["data_column"]] in passed_ids:
+                    already_in_tree.append(row[config["data_column"]])
+        run = []
+
+        for record in passed:
+            if record.id in already_in_tree:
+                record.description = record.description + f" fail=already_in_tree"
+                do_not_run.append(record)
+                print(cyan(f"    - {record.id}\tis already in tree"))
+            else:
+                run.append(record)
+            
+
         post_qc_query = os.path.join(config["outdir"], 'query.post_qc.fasta')
         with open(post_qc_query,"w") as fw:
             SeqIO.write(run, fw, "fasta")
@@ -805,12 +828,12 @@ def parse_protect(protect_arg,metadata,config):
                 print(green(f"Number of background sequences to be protected:") + f" {count}")
 
 
-def collapse_config(collapse_threshold,config,default_dict):
+def collapse_config(collapse_threshold,config):
 
-    collapse_threshold = check_arg_config_default("collapse_threshold",collapse_threshold, config, default_dict)
+    add_arg_to_config("collapse_threshold",collapse_threshold, config)
 
     try:
-        collapse_threshold = int(collapse_threshold)
+        collapse_threshold = int(config["collapse_threshold"])
     except:
         sys.stderr.write(cyan(f"Error: collapse_threshold must be an integer\n"))
         sys.exit(-1)
@@ -820,37 +843,37 @@ def collapse_config(collapse_threshold,config,default_dict):
     print(green(f"Collapse threshold: ")+f"{collapse_threshold}")
 
 
-def distance_config(distance,up_distance,down_distance,config,default_dict):
+def distance_config(distance,up_distance,down_distance,config):
 
-    distance = check_arg_config_default("distance",distance, config, default_dict)
-    down_distance = check_arg_config_default("down_distance",down_distance, config, default_dict)
-    up_distance = check_arg_config_default("up_distance",up_distance, config, default_dict)
+    qcfunk.add_arg_to_config("distance",distance, config)
+    qcfunk.add_arg_to_config("down_distance",down_distance, config)
+    qcfunk.add_arg_to_config("up_distance",up_distance, config)
 
     try:
-        distance = int(distance)
+        distance = int(config["distance"])
         config["distance"] = distance
     except:
         sys.stderr.write(cyan(f"Error: distance must be an integer\n"))
         sys.exit(-1)
 
-    if down_distance:
+    if config["down_distance"]:
         try:
-            config["down_distance"] = int(down_distance)
+            config["down_distance"] = int(config["down_distance"])
         except:
             sys.stderr.write(cyan(f"Error: down_distance must be an integer\n"))
             sys.exit(-1)
     else:
-        down_distance = distance
+        down_distance = config["distance"]
         config["down_distance"] = down_distance
 
-    if up_distance:
+    if config["up_distance"]:
         try:
-            config["up_distance"] = int(up_distance)
+            config["up_distance"] = int(config["up_distance"])
         except:
             sys.stderr.write(cyan(f"Error: up_distance must be an integer\n"))
             sys.exit(-1)
     else:
-        up_distance = distance
+        up_distance = config["distance"]
         config["up_distance"] = up_distance
 
 
