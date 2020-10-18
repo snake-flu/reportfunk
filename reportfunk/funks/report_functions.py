@@ -26,29 +26,30 @@ def report_date(config):
 def multi_line_free_text(free_text_arg,config):
 
     if free_text_arg in config:
-        
-        start = config[free_text_arg].replace("'","")
-        
-        end = "print('''" + start + "''')"
-             
-        config[free_text_arg] = end
+        if config[free_text_arg]:
+            start = config[free_text_arg].replace("'","")
+            
+            end = "print('''" + start + "''')"
+                
+            config[free_text_arg] = end
 
 def authors(config):
 
     if "authors" in config:
+        if config["authors"]:
 
-        authors_str = config["authors"]
+            authors_str = config["authors"]
 
-        config["authors"] = "**Authors**: " + authors_str
+            config["authors"] = "**Authors**: " + authors_str
 
 
 def outbreak_id(config):
 
     if "outbreak_id" in config:
+        if config["outbreak_id"]:
+            outbreak_id = config["outbreak_id"]
 
-        outbreak_id = config["outbreak_id"]
-
-        config["outbreak_id"] = "**Outbreak ID**: " + outbreak_id
+            config["outbreak_id"] = "**Outbreak ID**: " + outbreak_id
 
 def free_text_args(config):
     
