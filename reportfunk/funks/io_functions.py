@@ -23,7 +23,8 @@ DIM = '\033[2m'
 def make_config_file(config_name, config):
     config_to_write = {}
     for k in config:
-        if k != "generate_config":
+        if k not in ["generate_config","tempdir","summary_dir","treedir",
+                    "collapse_summary","filtered_background_metadata","outfile"]:
             config_to_write[k] = config[k]
     config_out = os.path.join(config["outdir"],config_name)
     with open(config_out,"w") as fw:
@@ -74,6 +75,13 @@ def type_input_file(input_arg,cwd,config):
 
     return query,configfile
     
+def parse_yaml_file(configfile,config):
+    with open(configfile,"r") as f:
+        input_config = yaml.load(f, Loader=yaml.FullLoader)
+        for key in input_config:
+            snakecase_key = key.replace("-","_")
+            config[snakecase_key] = input_config[key]
+    
 def make_csv_from_ids(id_list, config):
     query = os.path.join(config["outdir"], "query.csv")
     with open(query,"w") as fw:
@@ -87,16 +95,7 @@ def make_csv_from_ids(id_list, config):
         print(green(f"Number of IDs:") + f" {c}")
     return query
 
-def parse_yaml_file(configfile,config):
-    with open(configfile,"r") as f:
-        input_config = yaml.load(f, Loader=yaml.FullLoader)
-        for key in input_config:
-            snakecase_key = key.replace("-","_")
 
-            if not snakecase_key in config:
-                config[snakecase_key] = input_config[key]
-
-    return config
 
 def check_query_file(query, cwd, config):
     queryfile = ""
@@ -124,7 +123,7 @@ def check_query_file(query, cwd, config):
         sys.stderr.write(cyan(f"Error: cannot find query file at {queryfile}\nCheck if the file exists, or if you're inputting a set of ids in config (e.g. EPI12345,EPI23456) please provide them under keyword `ids`\n."))
         sys.exit(-1)
 
-def check_background_for_queries(config,default_dict):
+def check_background_for_queries(config):
 
     data_column = config["data_column"]
     input_column = config["input_column"]
@@ -145,7 +144,7 @@ def check_background_for_queries(config,default_dict):
         sys.exit(-1) 
 
 
-def check_query_for_input_column(config,default_dict):
+def check_query_for_input_column(config):
 
     input_column = config["input_column"]
     
@@ -179,13 +178,17 @@ def get_query_fasta(fasta_arg,cwd,config):
         fasta = os.path.join(cwd, fasta_arg)
 
     elif "fasta" in config:
-        fasta = os.path.join(config["path_to_query"], config["fasta"]) 
+        if config["fasta"]:
+            expanded_path = os.path.expanduser(config["fasta"])
+            fasta = os.path.join(config["path_to_query"], expanded_path) 
+        else:
+            fasta = ""
 
     else:
         fasta = ""
 
     if fasta:
-        if not os.path.exists(fasta):
+        if not os.path.isfile(fasta):
             sys.stderr.write(cyan(f'Error: cannot find fasta query at {fasta}\n'))
             sys.exit(-1)
         else:
@@ -193,16 +196,31 @@ def get_query_fasta(fasta_arg,cwd,config):
     
     config["fasta"] = fasta 
 
-def get_outdir(outdir_arg,output_prefix_arg,cwd,config,default_dict):
+def make_timestamped_outdir(cwd,outdir,config):
+
+    output_prefix = config["output_prefix"]
+    split_prefix = output_prefix.split("_")
+    if split_prefix[-1].startswith("20"):
+        output_prefix = '_'.join(split_prefix[:-1])
+    config["output_prefix"] = output_prefix
+    timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
+    outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
+    rel_outdir = os.path.join(".",timestamp)
+
+    return outdir, rel_outdir
+
+def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
     outdir = ''
     
-    output_prefix = check_arg_config_default("output_prefix",output_prefix_arg, config, default_dict)
+    add_arg_to_config("output_prefix",output_prefix_arg, config)
     
-
     if outdir_arg:
         expanded_path = os.path.expanduser(outdir_arg)
         outdir = os.path.join(cwd,expanded_path)
         rel_outdir = os.path.relpath(outdir, cwd) 
+
+    elif config["update"] or config["cluster"]:
+        outdir, rel_outdir = make_timestamped_outdir(cwd,outdir,config)
 
     elif "outdir" in config:
         expanded_path = os.path.expanduser(config["outdir"])
@@ -210,13 +228,14 @@ def get_outdir(outdir_arg,output_prefix_arg,cwd,config,default_dict):
         rel_outdir = os.path.relpath(outdir, cwd) 
 
     else:
-        timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
-        outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
-        
-        rel_outdir = os.path.join(".",timestamp)
+        outdir, rel_outdir = make_timestamped_outdir(cwd,outdir,config)
     
     today = date.today()
     d = today.strftime("%Y-%m-%d")
+    output_prefix = config["output_prefix"]
+    split_prefix = output_prefix.split("_")
+    if split_prefix[-1].startswith("20"):
+        output_prefix = '_'.join(split_prefix[:-1])
     config["output_prefix"] = f"{output_prefix}_{d}"
 
     if not os.path.exists(outdir):
@@ -239,18 +258,21 @@ def get_temp_dir(tempdir_arg,no_temp_arg, cwd,config):
     if no_temp_arg:
         print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
         tempdir = outdir
-    elif "no_temp" in config:
+        config["no_temp"] = no_temp_arg
+    elif config["no_temp"]:
         print(green(f"--no-temp:") + f" All intermediate files will be written to {outdir}")
         tempdir = outdir
     elif tempdir_arg:
-        to_be_dir = os.path.join(cwd, tempdir_arg)
+        expanded_path = os.path.expanduser(tempdir_arg)
+        to_be_dir = os.path.join(cwd,expanded_path)
         if not os.path.exists(to_be_dir):
             os.mkdir(to_be_dir)
         temporary_directory = tempfile.TemporaryDirectory(suffix=None, prefix=None, dir=to_be_dir)
         tempdir = temporary_directory.name
 
     elif "tempdir" in config:
-        to_be_dir = os.path.join(cwd, config["tempdir"])
+        expanded_path = os.path.expanduser(config["tempdir"])
+        to_be_dir = os.path.join(cwd,expanded_path)
         if not os.path.exists(to_be_dir):
             os.mkdir(to_be_dir)
         temporary_directory = tempfile.TemporaryDirectory(suffix=None, prefix=None, dir=to_be_dir)
@@ -373,7 +395,7 @@ def check_date_columns(config, date_column_list):
                     row_num +=1
                     check_date_format(line[col],row_num, col)
 
-def check_metadata_for_search_columns(config,default_dict):
+def check_metadata_for_search_columns(config):
 
     data_column = config["data_column"]
     
@@ -385,27 +407,24 @@ def check_metadata_for_search_columns(config,default_dict):
             sys.exit(-1)
 
     config["background_metadata_header"] = header
-    config["data_column"] = data_column
+    
 
-def data_columns_to_config(args,config,default_dict):
-
+def data_columns_to_config(args,config):
     ## input_column
-    input_column = check_arg_config_default("input_column",args.input_column, config, default_dict)
-    config["input_column"] = input_column
+    add_arg_to_config("input_column",args.input_column, config)
 
     ## data_column
-    data_column = check_arg_config_default("data_column",args.data_column, config, default_dict)
-    config["data_column"] = data_column
+    add_arg_to_config("data_column",args.data_column, config)
 
-def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
+def qc_dict_inputs(config_key, value_check, config):
 
     background_metadata_headers = config["background_metadata_header"]
-
+    column_names = config["query_metadata_header"]
     output = []
 
     input_to_check = config[config_key]
-    default_key = default_dict[config_key].split("=")[0] #if the len(dict) > 1 this will have to change
-    default_value = default_dict[config_key].split("=")[1]
+
+    default_value = "viridis"
 
     if type(input_to_check) == str: 
         sections = input_to_check.split(",") 
@@ -441,7 +460,7 @@ def qc_dict_inputs(config_key,default_dict,column_names, value_check, config):
     return output
 
 
-def check_label_and_tree_and_date_fields(config, default_dict):
+def check_label_and_tree_and_date_fields(config):
 
     metadata = config["background_metadata"]
     metadata_headers = config["background_metadata_header"]
@@ -490,7 +509,7 @@ def check_label_and_tree_and_date_fields(config, default_dict):
     if date_field_str:
         check_date_columns(config, date_field_str.split(",")) 
 
-    graphic_dict_output = qc_dict_inputs("colour_by", default_dict,column_names, acceptable_colours, config)
+    graphic_dict_output = qc_dict_inputs("colour_by", acceptable_colours, config)
 
     for i in graphic_dict_output.split(","):
         element = i.split(":")[0]
@@ -517,7 +536,7 @@ def check_label_and_tree_and_date_fields(config, default_dict):
     # else:
     #     print(green(f'Using {sample_date_column} as sample date in query metadata'))
 
-def check_table_fields(table_fields, snp_data, config, default_dict):
+def check_table_fields(table_fields, snp_data, config):
     
     column_names = config["query_metadata_header"]
 
@@ -530,7 +549,7 @@ def check_table_fields(table_fields, snp_data, config, default_dict):
     else:
         print(green(f"Not showing SNP information in table\n"))
 
-def check_summary_field(config_key, config, default_dict):
+def check_summary_field(config_key, config):
 
     column_names = config["background_metadata_header"]
 
@@ -546,26 +565,17 @@ def collapse_summary_path_to_config(config):
     path = os.path.join(config["outdir"],"catchment_trees", "tree_collapsed_nodes.csv")
     config["collapse_summary"] = path
 
-def check_arg_config_default(key,arg,config,default):
-    new_str = ""
+def add_arg_to_config(key,arg,config):
     if arg:
-        new_str = arg
-    elif key in config:
-        new_str = config[key]
-    else:
-        new_str = default[key]
-    return new_str
+        config[key] = arg
 
-def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
+def input_file_qc(minlen_arg,maxambig_arg,config):
     post_qc_query = ""
     qc_fail = ""
     fasta = config["fasta"]
 
-    minlen = check_arg_config_default("min_length",minlen_arg,config,default_dict)
-    maxambig = check_arg_config_default("max_ambiguity",maxambig_arg,config,default_dict)
-
-    config["min_length"] = minlen
-    config["max_ambiguity"] = maxambig
+    add_arg_to_config("min_length",minlen_arg,config)
+    add_arg_to_config("max_ambiguity",maxambig_arg,config)
 
     num_seqs =0
 
@@ -576,17 +586,21 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
             reader = csv.DictReader(f)
             for row in reader:
                 queries.append(row[config["input_column"]])
+
         do_not_run = []
-        run = []
+        passed = []
+        
+        
+
         for record in SeqIO.parse(fasta, "fasta"):
-            if len(record) <minlen:
+            if len(record) < config["min_length"]:
                 record.description = record.description + f" fail=seq_len:{len(record)}"
                 do_not_run.append(record)
                 print(cyan(f"    - {record.id}\tsequence too short: Sequence length {len(record)}"))
             else:
                 num_N = str(record.seq).upper().count("N")
                 prop_N = round((num_N)/len(record.seq), 2)
-                if prop_N > maxambig: 
+                if prop_N > config["max_ambiguity"]: 
                     record.description = record.description + f" fail=N_content:{prop_N}"
                     do_not_run.append(record)
                     print(cyan(f"    - {record.id}\thas an N content of {prop_N}"))
@@ -596,8 +610,26 @@ def input_file_qc(minlen_arg,maxambig_arg,config,default_dict):
                         do_not_run.append(record)
                         print(cyan(f"    - {record.id}\tis not in query"))
                     else:
-                        run.append(record)
+                        passed.append(record)
         
+        passed_ids = [i.id for i in passed]
+        already_in_tree = []
+        with open(config["background_metadata"],"r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row[config["data_column"]] in passed_ids:
+                    already_in_tree.append(row[config["data_column"]])
+        run = []
+
+        for record in passed:
+            if record.id in already_in_tree:
+                record.description = record.description + f" fail=already_in_tree"
+                do_not_run.append(record)
+                print(cyan(f"    - {record.id}\tis already in tree"))
+            else:
+                run.append(record)
+            
+
         post_qc_query = os.path.join(config["outdir"], 'query.post_qc.fasta')
         with open(post_qc_query,"w") as fw:
             SeqIO.write(run, fw, "fasta")
@@ -726,7 +758,18 @@ def filter_down_metadata(query_dict,metadata):
     return rows_to_search
 
 
-def generate_query_from_metadata(from_metadata, metadata, config):
+def from_metadata_checks(config):
+    if "query" in config:
+        if config["query"]:
+            if not config["update"]:
+                sys.stderr.write(cyan('Error: please specifiy either -fm/--from-metadata or an input csv/ID string.\n'))
+                sys.exit(-1)
+    elif "fasta" in config:
+        if config["fasta"]:
+            sys.stderr.write(cyan('Error: fasta file option cannot be used in conjunction with -fm/--from-metadata.\nPlease specifiy an input csv with your fasta file.\n'))
+            sys.exit(-1)
+
+def generate_query_from_metadata(query,from_metadata, metadata, config):
 
     print(green("From metadata:"))
     to_parse = ""
@@ -746,7 +789,7 @@ def generate_query_from_metadata(from_metadata, metadata, config):
     # if this is empty, for each column to search it'll open the whole file and search them
     # if it's not empty, it'll only search this list of rows
     
-    query = os.path.join(config["outdir"], "from_metadata_query.csv")
+    
 
     with open(query,"w") as fw:
         writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
@@ -760,10 +803,10 @@ def generate_query_from_metadata(from_metadata, metadata, config):
             query_ids.append(row[data_column])
 
         if count == 0:
-            sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nExiting\n"))
+            sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nPlease check your query is in the correct format (e.g. sample_date=YYYY-MM-DD).\nExiting\n"))
             sys.exit(-1)
         print(green(f"Number of sequences matching defined query:") + f" {count}")
-        if len(query_ids) < 100:
+        if len(query_ids) < 50:
             for i in query_ids:
                 print(f" - {i}")
     return query
@@ -810,12 +853,12 @@ def parse_protect(protect_arg,metadata,config):
                 print(green(f"Number of background sequences to be protected:") + f" {count}")
 
 
-def collapse_config(collapse_threshold,config,default_dict):
+def collapse_config(collapse_threshold,config):
 
-    collapse_threshold = check_arg_config_default("collapse_threshold",collapse_threshold, config, default_dict)
+    add_arg_to_config("collapse_threshold",collapse_threshold, config)
 
     try:
-        collapse_threshold = int(collapse_threshold)
+        collapse_threshold = int(config["collapse_threshold"])
     except:
         sys.stderr.write(cyan(f"Error: collapse_threshold must be an integer\n"))
         sys.exit(-1)
@@ -825,37 +868,37 @@ def collapse_config(collapse_threshold,config,default_dict):
     print(green(f"Collapse threshold: ")+f"{collapse_threshold}")
 
 
-def distance_config(distance,up_distance,down_distance,config,default_dict):
+def distance_config(distance,up_distance,down_distance,config):
 
-    distance = check_arg_config_default("distance",distance, config, default_dict)
-    down_distance = check_arg_config_default("down_distance",down_distance, config, default_dict)
-    up_distance = check_arg_config_default("up_distance",up_distance, config, default_dict)
+    add_arg_to_config("distance",distance, config)
+    add_arg_to_config("down_distance",down_distance, config)
+    add_arg_to_config("up_distance",up_distance, config)
 
     try:
-        distance = int(distance)
+        distance = int(config["distance"])
         config["distance"] = distance
     except:
         sys.stderr.write(cyan(f"Error: distance must be an integer\n"))
         sys.exit(-1)
 
-    if down_distance:
+    if config["down_distance"]:
         try:
-            config["down_distance"] = int(down_distance)
+            config["down_distance"] = int(config["down_distance"])
         except:
             sys.stderr.write(cyan(f"Error: down_distance must be an integer\n"))
             sys.exit(-1)
     else:
-        down_distance = distance
+        down_distance = config["distance"]
         config["down_distance"] = down_distance
 
-    if up_distance:
+    if config["up_distance"]:
         try:
-            config["up_distance"] = int(up_distance)
+            config["up_distance"] = int(config["up_distance"])
         except:
             sys.stderr.write(cyan(f"Error: up_distance must be an integer\n"))
             sys.exit(-1)
     else:
-        up_distance = distance
+        up_distance = config["distance"]
         config["up_distance"] = up_distance
 
 
