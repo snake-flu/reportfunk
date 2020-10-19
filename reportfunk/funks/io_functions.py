@@ -424,7 +424,7 @@ def qc_dict_inputs(config_key, value_check, config):
 
     input_to_check = config[config_key]
 
-    default_value = "viridis"
+    default_value = "RdYlBu"
 
     if type(input_to_check) == str: 
         sections = input_to_check.split(",") 
@@ -513,9 +513,13 @@ def check_label_and_tree_and_date_fields(config):
 
     for i in graphic_dict_output.split(","):
         element = i.split(":")[0]
+        tree_field_list = tree_field_str.split(",")
         if element not in tree_field_str.split(",") and element != "adm1":
-            sys.stderr.write(cyan(f"Error: Field {element} in graphic dictionary but not in tree fields. Please add to tree fields if you want to colour by it.\n"))
-            sys.exit(-1)
+            tree_field_list.append(element)
+            tree_field_str = ",".join(tree_field_list)
+            config["tree_fields"] = tree_field_str
+            # sys.stderr.write(cyan(f"Error: Field {element} in graphic dictionary but not in tree fields. Please add to tree fields if you want to colour by it.\n"))
+            # sys.exit(-1)
 
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["colour_by"] = graphic_dict_output
