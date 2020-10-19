@@ -424,7 +424,7 @@ def qc_dict_inputs(config_key, value_check, config):
 
     input_to_check = config[config_key]
 
-    default_value = "RdYlBu"
+    default_value = "Paired"
 
     if type(input_to_check) == str: 
         sections = input_to_check.split(",") 
