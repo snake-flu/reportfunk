@@ -199,7 +199,10 @@ def get_query_fasta(fasta_arg,cwd,config):
 def make_timestamped_outdir(cwd,outdir,config):
 
     output_prefix = config["output_prefix"]
-
+    split_prefix = output_prefix.split("_")
+    if split_prefix[-1].startswith("20"):
+        output_prefix = '_'.join(split_prefix[:-1])
+    config["output_prefix"] = output_prefix
     timestamp = str(datetime.now().isoformat(timespec='milliseconds')).replace(":","").replace(".","").replace("T","-")
     outdir = os.path.join(cwd, f"{output_prefix}_{timestamp}")
     rel_outdir = os.path.join(".",timestamp)
@@ -230,6 +233,9 @@ def get_outdir(outdir_arg,output_prefix_arg,cwd,config):
     today = date.today()
     d = today.strftime("%Y-%m-%d")
     output_prefix = config["output_prefix"]
+    split_prefix = output_prefix.split("_")
+    if split_prefix[-1].startswith("20"):
+        output_prefix = '_'.join(split_prefix[:-1])
     config["output_prefix"] = f"{output_prefix}_{d}"
 
     if not os.path.exists(outdir):
@@ -750,14 +756,15 @@ def filter_down_metadata(query_dict,metadata):
 def from_metadata_checks(config):
     if "query" in config:
         if config["query"]:
-            sys.stderr.write(cyan('Error: please specifiy either -fm/--from-metadata or an input csv/ID string.\n'))
-            sys.exit(-1)
+            if not config["update"]:
+                sys.stderr.write(cyan('Error: please specifiy either -fm/--from-metadata or an input csv/ID string.\n'))
+                sys.exit(-1)
     elif "fasta" in config:
         if config["fasta"]:
             sys.stderr.write(cyan('Error: fasta file option cannot be used in conjunction with -fm/--from-metadata.\nPlease specifiy an input csv with your fasta file.\n'))
             sys.exit(-1)
 
-def generate_query_from_metadata(from_metadata, metadata, config):
+def generate_query_from_metadata(query,from_metadata, metadata, config):
 
     print(green("From metadata:"))
     to_parse = ""
@@ -777,7 +784,7 @@ def generate_query_from_metadata(from_metadata, metadata, config):
     # if this is empty, for each column to search it'll open the whole file and search them
     # if it's not empty, it'll only search this list of rows
     
-    query = os.path.join(config["outdir"], "from_metadata_query.csv")
+    
 
     with open(query,"w") as fw:
         writer = csv.DictWriter(fw, fieldnames=column_names,lineterminator='\n')
@@ -791,7 +798,7 @@ def generate_query_from_metadata(from_metadata, metadata, config):
             query_ids.append(row[data_column])
 
         if count == 0:
-            sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nExiting\n"))
+            sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nPlease check your query is in the correct format (e.g. sample_date=YYYY-MM-DD).\nExiting\n"))
             sys.exit(-1)
         print(green(f"Number of sequences matching defined query:") + f" {count}")
         if len(query_ids) < 50:
