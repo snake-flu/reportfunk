@@ -124,17 +124,20 @@ def find_colour_dict(query_dict, trait, colour_scheme):
     else:
         cmap = cm.get_cmap(colour_scheme)
 
+    for query in query_dict.values():
+        attribute_options.add(query.attribute_dict[trait])
+
     if trait == "adm1":
         colour_dict = {"Wales":"darkseagreen",
                 "England":"indianred",
                 "Scotland":"steelblue",
                 "Northern_Ireland":"skyblue",
                 "NA": "dimgrey"}
-        return colour_dict
 
-    else:
-        for query in query_dict.values():
-            attribute_options.add(query.attribute_dict[trait])
+        if "Other" in attribute_options:
+            colour_dict["Other"] = "lightgrey"
+        
+        return colour_dict
 
     #get the right number of colours, then loop through the set
     colour_dict = {}

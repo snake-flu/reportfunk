@@ -237,8 +237,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                             if "adm1" not in col_names and "adm1" in tree_fields:
                                 if sequence[col] in UK_adm2_dict.keys():
                                     adm1 = UK_adm2_dict[sequence[col]]
-                                    taxon.attribute_dict["adm1"] = adm1
-                
+                                    taxon.attribute_dict["adm1"] = adm1               
 
                 new_query_dict[taxon.name] = taxon
 
@@ -343,7 +342,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                             if field != "adm1":
                                 tax_object.attribute_dict[field] = sequence[field]
                             else:
-                                adm1 = UK_adm1(tax_object.name,sequence[field])
+                                if country == "UK":
+                                    adm1 = UK_adm1(tax_object.name,sequence[field])
+                                else:
+                                    adm1 = "Other"
                                 tax_object.attribute_dict[field] = adm1
 
                 for field in label_fields:
