@@ -111,7 +111,7 @@ def display_name(tree, tree_name, inserted_node_dict, full_taxon_dict, query_dic
                         k.traits["display"] = display
                         k.node_number = 1
                     else:
-                        k.traits["display"] = name + "|" + "not in dict"
+                        k.traits["display"] = name
                         k.node_number = 1
 
 
