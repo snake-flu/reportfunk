@@ -521,6 +521,7 @@ def check_label_and_tree_and_date_fields(config):
             # sys.stderr.write(cyan(f"Error: Field {element} in graphic dictionary but not in tree fields. Please add to tree fields if you want to colour by it.\n"))
             # sys.exit(-1)
 
+
     print(green(f"Colouring by: ") + f"{graphic_dict_output}")
     config["colour_by"] = graphic_dict_output
 
@@ -633,7 +634,7 @@ def input_file_qc(minlen_arg,maxambig_arg,config):
             else:
                 run.append(record)
             
-
+        
         post_qc_query = os.path.join(config["outdir"], 'query.post_qc.fasta')
         with open(post_qc_query,"w") as fw:
             SeqIO.write(run, fw, "fasta")
@@ -648,12 +649,15 @@ def input_file_qc(minlen_arg,maxambig_arg,config):
                 for i in desc:
                     if i.startswith("fail="):
                         fw.write(f"{record.id},{i}\n")
+        
 
         num_seqs = len(run)
 
     config["post_qc_query"] = post_qc_query
     config["qc_fail"] = qc_fail
     config["num_seqs"] = num_seqs
+    if num_seqs ==0:
+        config["fasta"] = ""
 
     return num_seqs
 
@@ -772,7 +776,7 @@ def from_metadata_checks(config):
         if config["fasta"]:
             sys.stderr.write(cyan('Error: fasta file option cannot be used in conjunction with -fm/--from-metadata.\nPlease specifiy an input csv with your fasta file.\n'))
             sys.exit(-1)
-
+            
 def generate_query_from_metadata(query,from_metadata, metadata, config):
 
     print(green("From metadata:"))
@@ -783,8 +787,8 @@ def generate_query_from_metadata(query,from_metadata, metadata, config):
     elif "from_metadata" in config:
         to_parse = config["from_metadata"]
 
-    data_column = config["data_column"]
-    config["input_column"] = data_column
+    config["data_column"] = "sequence_name"
+    config["input_column"] = "sequence_name"
     
     # checks if field in metadata file and adds to dict: query_dict[country]=Ireland for eg
     query_dict,column_names = get_dict_of_metadata_filters("from_metadata",to_parse, metadata)
@@ -804,7 +808,7 @@ def generate_query_from_metadata(query,from_metadata, metadata, config):
         for row,c in rows_to_search:
             writer.writerow(row)
             count +=1
-            query_ids.append(row[data_column])
+            query_ids.append(row["sequence_name"])
 
         if count == 0:
             sys.stderr.write(cyan(f"Error: No sequences meet the criteria defined with `--from-metadata`.\nPlease check your query is in the correct format (e.g. sample_date=YYYY-MM-DD).\nExiting\n"))
