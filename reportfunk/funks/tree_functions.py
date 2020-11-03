@@ -63,10 +63,10 @@ def default_labels(taxon_obj, query_dict, custom_tip_fields):
     display_name_element = taxon_obj.display_name
     display_name= f"{display_name_element}|{date}"
     
-    if "adm2" in taxon_obj.attribute_dict.keys():
-        adm2 = taxon_obj.attribute_dict["adm2"]
-        if adm2 !="":
-            display_name = f"{display_name_element}|{adm2}|{date}"
+    if "location_label" in taxon_obj.attribute_dict.keys():
+        loc_label = taxon_obj.attribute_dict["location_label"]
+        if loc_label !="":
+            display_name = f"{display_name_element}|{loc_label}|{date}"
         else:
             display_name = f"{display_name_element}|{date}"
 
@@ -74,6 +74,8 @@ def default_labels(taxon_obj, query_dict, custom_tip_fields):
     if custom_tip_fields: 
         if taxon_obj.name in query_dict.keys(): 
             for label_element in custom_tip_fields:
+                if label_element == "adm2":
+                        label_element = taxon_obj.attribute_dict["location_label"]
                 if count == 0:
                     display_name = taxon_obj.display_name
                 else:   
