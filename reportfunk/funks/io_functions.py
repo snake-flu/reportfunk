@@ -526,7 +526,7 @@ def check_label_and_tree_and_date_fields(config):
     else:
         print(green(f'Using {database_sample_date_column} as sample date in background metadata'))
 
-def check_table_fields(table_fields, snp_data, config):
+def check_table_fields(config):
     
     column_names = config["query_metadata_header"]
 
@@ -534,7 +534,7 @@ def check_table_fields(table_fields, snp_data, config):
 
     print(green(f"Displaying {table_field_str} as well as Query ID and Tree in table\n"))
     
-    if config["include_snp_table"]:
+    if not config["remove_snp_table"]:
         print(green(f"Showing SNP distance data in table\n"))
     else:
         print(green(f"Not showing SNP information in table\n"))

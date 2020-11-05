@@ -3,7 +3,7 @@ from collections import defaultdict
 import pandas as pd
 import os
 
-def make_custom_table(query_dict, taxa_dict, table_fields, include_snp_table):
+def make_custom_table(query_dict, taxa_dict, table_fields, remove_snp_table):
 
     df_dict_indb = defaultdict(list)
     df_dict_seqprovided = defaultdict(list)
@@ -28,7 +28,7 @@ def make_custom_table(query_dict, taxa_dict, table_fields, include_snp_table):
             df_dict["Sequence name in tree"].append(query.name)
         else:
             df_dict["Closest sequence in tree"].append(query.closest)
-            if include_snp_table or "SNPs" in table_fields or "snps" in table_fields:
+            if not remove_snp_table or "SNPs" in table_fields or "snps" in table_fields:
                 df_dict["Distance to closest sequence"].append(query.closest_distance)
                 df_dict["SNPs"].append(query.snps)
 
