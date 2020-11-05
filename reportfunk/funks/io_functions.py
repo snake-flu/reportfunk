@@ -343,7 +343,7 @@ def qc_list_inputs(config_key, column_names,config):
     
     return field_str
 
-def check_date_format(date_string,config_key=None,row_number=None,column_name=None):
+def check_date_format(date_string,row_number=None,column_name=None):
     date_format = '%Y-%m-%d'
     check_date= ""
     if date_string != "" and date_string != "NA":
@@ -367,14 +367,6 @@ def check_date_columns(config, date_column_list):
     query_header = config["query_metadata_header"]
     metadata = config["background_metadata"]
 
-    # with open(query) as f:
-    #     reader = csv.DictReader(f)
-    #     query_header = reader.fieldnames
-
-    # with open(metadata, "r", encoding = "utf-8") as f:
-    #     reader = csv.DictReader(f)
-    #     metadata_header = reader.fieldnames
-    
     with open(query) as f:
         reader = csv.DictReader(f)
         data = [r for r in reader]
@@ -509,6 +501,8 @@ def check_label_and_tree_and_date_fields(config):
     if date_field_str:
         check_date_columns(config, date_field_str.split(",")) 
 
+    check_date_columns(config,[config["sample_date_column"]])
+
     graphic_dict_output = qc_dict_inputs("colour_by", acceptable_colours, config)
 
     for i in graphic_dict_output.split(","):
@@ -531,15 +525,6 @@ def check_label_and_tree_and_date_fields(config):
         sys.exit(-1)
     else:
         print(green(f'Using {database_sample_date_column} as sample date in background metadata'))
-
-    #Removing this for now because it checks in the report maker if it's present. Easier I think because they don't have to provide any date here.
-    # sample_date_column = config["sample_date_column"]
-    # if len(column_names) > 1 and sample_date_column not in column_names and sample_date_column != "sample_date": #if the input is a query string, or they've provided an actual date column to check. 
-    # #If it's default I don't think we check it because they don't to provide that data (as long as it's somewhere)
-    #     sys.stderr.write(cyan(f"Error: Field {sample_date_column} not in query for sample date indication.\n"))
-    #     sys.exit(-1)
-    # else:
-    #     print(green(f'Using {sample_date_column} as sample date in query metadata'))
 
 def check_table_fields(table_fields, snp_data, config):
     
