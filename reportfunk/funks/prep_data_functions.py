@@ -71,7 +71,10 @@ def prepping_adm2_adm1_data(background_metadata, headers):
             in_data = [x for x in r]
             for seq in in_data:
                 if seq["country"] == "UK":
-                    adm1 = contract_dict[seq["adm1"].split("-")[1]]
+                    if "-" in seq["adm1"]:
+                        adm1 = contract_dict[seq["adm1"].split("-")[1]]
+                    else:
+                        adm1 = seq["adm1"]
                     adm2 = seq["adm2"]
                 
                     if adm2.upper() not in illegal_values and adm2 not in official_adm2_adm1:
