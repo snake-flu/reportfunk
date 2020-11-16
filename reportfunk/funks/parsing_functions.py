@@ -233,7 +233,20 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                             taxon.attribute_dict["adm1"] = adm1
 
                         if col == "adm2":
-                            taxon.attribute_dict["adm2"] = sequence["adm2"]
+
+                            adm2 = sequence["adm2"] 
+                            if "|" in adm2:
+                                adm2 = "|".join(sorted(adm2.split("|")))
+                            
+                            taxon.attribute_dict["adm2"] = adm2 
+
+                            if "location" in col_names:
+                               location_label = sequence["location"]
+                            else:
+                                location_label = adm2
+
+                            taxon.attribute_dict["location_label"] = location_label
+                            
                             if "adm1" not in col_names and "adm1" in tree_fields:
                                 if sequence[col] in UK_adm2_dict.keys():
                                     adm1 = UK_adm2_dict[sequence[col]]
@@ -253,6 +266,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
         col_name_prep = next(reader)
         col_names = list(col_name_prep.keys())
 
+    old_data = False
     with open(background_metadata, 'r') as f:
         reader = csv.DictReader(f)
         in_data = [r for r in reader]
@@ -262,11 +276,23 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
             date = sequence[database_sample_date_column] 
             country = sequence["country"]
 
+            if "adm2_raw" not in col_names: ##for civet
+                old_data = True
+
             if "adm2" in col_names:
-                adm2 = sequence["adm2"]
+                adm2 = sequence['adm2']
+                if "|" in adm2:
+                    adm2 = "|".join(sorted(adm2.split("|")))
+
+                if "location" in col_names:
+                    location_label = sequence["location"]
+                else:
+                    location_label = adm2
+
                 adm2_present_in_background = True
             else:
                 adm2 = ""
+                location_label = ""
                 adm2_present_in_background = False
 
             if virus == "sars-cov-2":	
@@ -304,6 +330,8 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                     new_taxon.tree = tip_to_tree[seq_name]
 
                 new_taxon.attribute_dict["adm2"] = adm2
+                new_taxon.attribute_dict["location_label"] = location_label
+
                 new_taxon.input_display_name = seq_name
 
                 for field in label_fields:
@@ -316,7 +344,6 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
             
 
             #There may be sequences not in COG tree but that are in the full metadata, so we want to pull out the additional information if it's not in the input csv
-            #Remember, then name has to match fully, so if it's not the x/y/z name this section won't work
             if seq_name in query_dict.keys(): 
                 tax_object = query_dict[seq_name]
                 if tax_object.sample_date == "NA" and date != "" and date != "NA":
@@ -328,6 +355,8 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 
                 if "adm2" not in tax_object.attribute_dict.keys() and adm2 != "":
                     tax_object.attribute_dict["adm2"] = adm2
+                if "location_label" not in tax_object.attribute_dict.keys() and location_label != "":
+                    tax_object.attribute_dict["location_label"] = location_label
 
                 for field in date_fields:
                     if field in reader.fieldnames:
@@ -367,7 +396,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
                 full_tax_dict[seq_name] = tax_object
                     
-    return full_tax_dict, adm2_present_in_background
+    return full_tax_dict, adm2_present_in_background, old_data
 
 def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, database_sample_date_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, reinfection=False, patient_id_col=None, virus="sars-cov-2"):
 
@@ -380,9 +409,9 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, patient_id_col=patient_id_col, reinfection=reinfection)
     
     #parse the full background metadata
-    full_tax_dict, adm2_present_in_background = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, date_fields=date_fields, virus=virus)
+    full_tax_dict, adm2_present_in_background, old_data = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, date_fields=date_fields, virus=virus)
 
-    return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background, full_query_count   
+    return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background, full_query_count, old_data 
 
 def investigate_QC_fails(QC_file, input_column):
 
