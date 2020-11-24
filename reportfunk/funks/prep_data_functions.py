@@ -25,9 +25,9 @@ def prep_argument_list(list_input):
 
 
 
-def analyse_inputs(inputs):
+def analyse_tree_inputs(inputs):
 
-    tree_fields, label_fields, graphic_dict, node_summary_option, map_sequences, mapping_trait, map_inputs = inputs 
+    tree_fields, label_fields, graphic_dict, node_summary_option = inputs 
 
     print("Showing " + ",".join(tree_fields) + " on the tree.")
 
@@ -41,18 +41,20 @@ def analyse_inputs(inputs):
     
     print("Summarising nodes by " + node_summary_option)
 
-    if map_sequences:
-        map_args = map_inputs.split(",")
-        if len(map_args) == 2:
-            if mapping_trait:
-                print("Mapping sequences using columns " + map_args[0] + " " + map_args[1] + " for x values and y values respectively, and colouring by " + mapping_trait)
-            else:
-                print("Mapping sequences using columns " + map_args[0] + " " + map_args[1] + " for x values and y values respectively.")
+def analyse_map_inputs(inputs):
+    map_sequences, mapping_trait, map_inputs = inputs
+    
+    map_args = map_inputs.split(",")
+    if len(map_args) == 2:
+        if mapping_trait:
+            print("Mapping sequences using columns " + map_args[0] + " " + map_args[1] + " for x values and y values respectively, and colouring by " + mapping_trait)
         else:
-            if mapping_trait:
-                print("Mapping sequences using columns " + map_args[0] + " for outer postcodes, and colouring by " + mapping_trait)
-            else:
-                print("Mapping sequences using columns " + map_args[0] + " for outer postocdes.")
+            print("Mapping sequences using columns " + map_args[0] + " " + map_args[1] + " for x values and y values respectively.")
+    else:
+        if mapping_trait:
+            print("Mapping sequences using columns " + map_args[0] + " for outer postcodes, and colouring by " + mapping_trait)
+        else:
+            print("Mapping sequences using columns " + map_args[0] + " for outer postocdes.")
 
 
 def prepping_adm2_adm1_data(background_metadata, headers):

@@ -174,7 +174,7 @@ def UK_adm1(query_name, input_value):
 
     return adm1
 
-def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=None, UK_adm2_dict=None, patient_id_col=None, reinfection=False): 
+def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, context_table_summary_field, date_fields=None, UK_adm2_dict=None, patient_id_col=None, reinfection=False): 
     
     full_query_count = 0
     new_query_dict = {}
@@ -213,7 +213,10 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
                         taxon.sample_date = sequence[sample_date_column]
                         taxon.epiweek = Week.fromdate(convert_date(sequence[sample_date_column]))
 
-
+                if context_table_summary_field and context_table_summary_field in col_names:
+                    if sequence["context_table_summary_field"] != "":
+                        taxon.attribute_dict["context_table_summary_field"] = sequence[context_table_summary_field]
+                     
                 for col in col_names: #Add other metadata fields provided
                     if col in table_fields:
                         if sequence[col] != "":
@@ -257,7 +260,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
       
     return new_query_dict, full_query_count 
 
-def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences, date_fields, virus):
+def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences,context_table_summary_field, date_fields, virus):
 
     full_tax_dict = query_dict.copy()
 
@@ -339,6 +342,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                         if sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
                             new_taxon.attribute_dict[field] = sequence[field]
 
+                if context_table_summary_field and context_table_summary_field in col_names:
+                    if sequence[context_table_summary_field] != "":
+                        new_taxon.attribute_dict["context_table_summary_field"] = sequence[context_table_summary_field]
+
                 full_tax_dict[seq_name] = new_taxon
 
             
@@ -357,6 +364,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                     tax_object.attribute_dict["adm2"] = adm2
                 if "location_label" not in tax_object.attribute_dict.keys() and location_label != "":
                     tax_object.attribute_dict["location_label"] = location_label
+
+                if context_table_summary_field and context_table_summary_field in col_names:
+                    if sequence[context_table_summary_field] != "" and tax_object.attribute_dict["context_table_summary_field"] == "NA":
+                        tax_object.attribute_dict["context_table_summary_field"] = sequence[context_table_summary_field]
 
                 for field in date_fields:
                     if field in reader.fieldnames:
@@ -398,7 +409,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                     
     return full_tax_dict, adm2_present_in_background, old_data
 
-def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, database_sample_date_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, date_fields=None, UK_adm2_adm1_dict=None, reinfection=False, patient_id_col=None, virus="sars-cov-2"):
+def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadata, background_metadata_file, input_csv, input_column, database_column, database_sample_date_column, display_name, sample_date_column, label_fields, tree_fields, table_fields, node_summary_option, context_table_summary_field, date_fields=None, UK_adm2_adm1_dict=None, reinfection=False, patient_id_col=None, virus="sars-cov-2"):
 
     present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict, protected_sequences = parse_tree_tips(treedir, collapsed_node_file)
     
@@ -406,10 +417,10 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column) 
 
     #Any query information they have provided
-    query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, patient_id_col=patient_id_col, reinfection=reinfection)
+    query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, context_table_summary_field, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, patient_id_col=patient_id_col, reinfection=reinfection)
     
     #parse the full background metadata
-    full_tax_dict, adm2_present_in_background, old_data = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, date_fields=date_fields, virus=virus)
+    full_tax_dict, adm2_present_in_background, old_data = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, context_table_summary_field, date_fields=date_fields, virus=virus)
 
     return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background, full_query_count, old_data 
 

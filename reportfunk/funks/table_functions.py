@@ -1,7 +1,9 @@
 
 from collections import defaultdict
+from collections import Counter
 import pandas as pd
 import os
+import reportfunk.funks.parsing_functions as parse
 
 def make_custom_table(query_dict, taxa_dict, table_fields, remove_snp_table):
 
@@ -65,6 +67,56 @@ def make_custom_table(query_dict, taxa_dict, table_fields, remove_snp_table):
         return df_seqprovided
     elif incogs and not seqprovideds:
         return df_indb
+
+def context_table(query_dict, taxa_dict, summarise_by):
+
+    df_dict = defaultdict(list)
+    values = []
+    closest_values = {}
+    no_values = []
+
+    for query in query_dict.values():
+        if not query.in_db and query.attribute_dict["context_table_summary_field"] == "NA" and taxa_dict[query.closest].attribute_dict["context_table_summary_field"]:
+            to_add = taxa_dict[query.closest].attribute_dict["context_table_summary_field"]
+            if to_add != "NA":
+                closest_values[query.name] = to_add
+            else:
+                no_values.append(query.name)
+        else:
+            to_add = query.attribute_dict["context_table_summary_field"]
+        
+        if to_add != "NA":
+            values.append(to_add)            
+       
+    value_count = Counter(values)
+
+    summary = defaultdict(list)
+    summary_dates = defaultdict(list)
+
+    for value, count in value_count.items():
+        for taxon in taxa_dict.values():
+            if taxon.attribute_dict["context_table_summary_field"] == value and taxon.country == "UK":
+                summary[value].append(taxon)
+                summary_dates[value].append(parse.convert_date(taxon.sample_date))
+
+    
+
+    for summary, total_tax in summary.items():
+        min_date = min(summary_dates[summary])
+        pretty_min = min_date.strftime("%Y-%m-%d")
+        max_date = max(summary_dates[summary])
+        pretty_max = max_date.strftime("%Y-%m-%d")
+
+        df_dict[summarise_by].append(summary)
+        df_dict["Date range"].append(f"{pretty_min} to {pretty_max}")
+        df_dict["Number in dataset"].append(value_count[summary])
+        df_dict["Total in COG"].append(len(total_tax))
+
+    df = pd.DataFrame(df_dict)
+    df.set_index(summarise_by, inplace=True)
+
+    return df, closest_values, no_values
+
 
 
 
