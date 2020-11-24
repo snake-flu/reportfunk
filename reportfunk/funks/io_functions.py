@@ -140,7 +140,7 @@ def check_background_for_queries(config):
                 c +=1
     if c == 0:
         sys.stderr.write(cyan(f'Error: no valid queries to process.\n') + f'\
-0 queries from `{input_column}` column matched in background metadata to `{data_column}`.\n')
+0 queries from `{input_column}` column matched in background metadata to `{data_column}`.\nUse `--data-column` to change the default search column in the database.\n')
         sys.exit(-1) 
 
 
