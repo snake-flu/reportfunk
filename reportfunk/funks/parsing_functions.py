@@ -298,11 +298,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                 location_label = ""
                 adm2_present_in_background = False
 
-            if virus == "sars-cov-2":	
-                uk_lineage = sequence["uk_lineage"]	
-                global_lineage = sequence["lineage"]	
-                phylotype = sequence["phylotype"]	
-
+            # if virus == "sars-cov-2":	
+            #     uk_lineage = sequence["uk_lineage"]	
+            #     global_lineage = sequence["lineage"]	
+            #     phylotype = sequence["phylotype"]	
 
             if node_summary_option == "adm2":
                 if country != "UK":
@@ -314,10 +313,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
             if seq_name in present_in_tree and seq_name not in query_dict.keys():
 
-                if virus == "sars-cov-2":	
-                    new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields, global_lineage=global_lineage, uk_lineage=uk_lineage, phylotype=phylotype)	
-                else:	
-                    new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields)
+                # if virus == "sars-cov-2":	
+                #     new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields, global_lineage=global_lineage, uk_lineage=uk_lineage, phylotype=phylotype)	
+                # else:	
+                new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields)
 
                 if date == "":
                     date = "NA"
@@ -399,10 +398,10 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                                 tax_object.table_dict[field] = sequence[field]
 
 
-                if virus == "sars-cov-2":
-                    tax_object.global_lineage = global_lineage
-                    tax_object.uk_lineage = uk_lineage
-                    tax_object.phylotype = phylotype
+                # if virus == "sars-cov-2":
+                #     tax_object.global_lineage = global_lineage
+                #     tax_object.uk_lineage = uk_lineage
+                #     tax_object.phylotype = phylotype
 
 
                 full_tax_dict[seq_name] = tax_object

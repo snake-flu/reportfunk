@@ -34,12 +34,12 @@ class taxon():
             self.attribute_dict[i.replace(" ","")] = "NA"
         for i in table_fields:
             self.table_dict[i.replace(" ","")] = "NA"
-            if i == "lineage":
-                self.table_dict["lineage"] = global_lineage
-            if i == "uk_lineage":
-                self.table_dict["uk_lineage"] = uk_lineage
-            if i == "phylotype":
-                self.table_dict["phylotype"] = phylotype
+            # if i == "lineage":
+            #     self.table_dict["lineage"] = global_lineage
+            # if i == "uk_lineage":
+            #     self.table_dict["uk_lineage"] = uk_lineage
+            # if i == "phylotype":
+            #     self.table_dict["phylotype"] = phylotype
         
         self.attribute_dict["context_table_summary_field"] = context_table_summary_field
         
@@ -48,9 +48,9 @@ class taxon():
         self.closest_distance = "NA"
         self.snps = "NA"
 
-        self.global_lineage = global_lineage
-        self.uk_lineage = uk_lineage
-        self.phylotype = phylotype
+        # self.global_lineage = global_lineage
+        # self.uk_lineage = uk_lineage
+        # self.phylotype = phylotype
 
 
 class lineage():
