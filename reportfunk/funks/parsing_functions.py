@@ -433,7 +433,7 @@ def investigate_QC_fails(QC_file, input_column):
         for sequence in in_data:
             name = sequence[input_column]
             reason = sequence["reason_for_failure"]
-
+            final_reason = reason
             if "seq_len" in reason:
                 length = reason.split(":")[1]
                 final_reason = "Sequence too short: only " + length + " bases."
