@@ -646,6 +646,39 @@ def input_file_qc(minlen_arg,maxambig_arg,config):
 
     return num_seqs
 
+def find_missing_sequences(config):
+
+    fasta = config["fasta"]
+    query = config["query"]
+    not_in_cog_file = os.path.join(config["tempdir"],"not_in_cog.csv")
+
+    missing_seqs = os.path.join(config["tempdir"], "not_in_cog_or_fasta.csv")
+
+    fw = open(missing_seqs, 'w')
+
+    fasta_list = []
+    not_in_cog_list = []
+
+    with open(not_in_cog_file) as f:
+        next(f)
+        for l in f:
+            not_in_cog_list.append(l.strip("\n"))
+
+    if fasta != "":
+        for record in SeqIO.parse(fasta, "fasta"):
+            fasta_list.append(record.id)
+        
+    with open(query) as f:
+        reader = csv.DictReader(f)
+        for line in reader:
+            name = line[config["input_column"]]
+            if name in not_in_cog_list and name not in fasta_list:
+                fw.write(name + "\n")
+
+    fw.close()
+
+    config["missing_sequences"] = missing_seqs
+
 def get_dict_of_metadata_filters(arg_type,to_parse, metadata):
     column_names =""
     query_dict = {}

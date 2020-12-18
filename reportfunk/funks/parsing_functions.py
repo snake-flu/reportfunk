@@ -104,6 +104,8 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
     query_dict = {}
     query_id_dict = {}
 
+    closest_seqs = set()
+
     tree_to_tip = defaultdict(list)
 
     with open(metadata_file, "r", encoding="utf-8") as f:
@@ -119,6 +121,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
             query_id = sequence['query_id']
             query_name = sequence['query']
             closest_name = sequence["closest"]
+            
             sample_date = sequence[database_date_column] #this may need to be flexible if using a different background database
 
             closest_distance = sequence["SNPdistance"]
@@ -135,11 +138,11 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
                     new_taxon.sample_date = sample_date
                     new_taxon.epiweek = Week.fromdate(convert_date(sample_date))
                     new_taxon.closest = "NA"
-
                 else:
                     new_taxon.closest = closest_name
                     new_taxon.closest_distance = closest_distance
                     new_taxon.snps = snps
+                    closest_seqs.add(closest_name)
                     
                 if query_name in tip_to_tree:
                     relevant_tree = tip_to_tree[query_name]
@@ -152,7 +155,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
                 query_dict[query_name] = new_taxon
                 query_id_dict[query_id] = new_taxon
             
-    return query_dict, query_id_dict, tree_to_tip
+    return query_dict, query_id_dict, tree_to_tip, closest_seqs
 
 def UK_adm1(query_name, input_value):
     
@@ -260,7 +263,7 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
       
     return new_query_dict, full_query_count 
 
-def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences,context_table_summary_field, date_fields, virus):
+def parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata, present_in_tree, closest_sequences, node_summary_option, tip_to_tree, database_name_column, database_sample_date_column, protected_sequences,context_table_summary_field, date_fields, virus):
 
     full_tax_dict = query_dict.copy()
 
@@ -311,8 +314,8 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
             else:
                 node_summary_trait = sequence[node_summary_option]
 
-            if seq_name in present_in_tree and seq_name not in query_dict.keys():
-
+            if (seq_name in present_in_tree or seq_name in closest_sequences) and seq_name not in query_dict.keys():
+                
                 # if virus == "sars-cov-2":	
                 #     new_taxon = taxon(seq_name, country, label_fields, tree_fields, table_fields, global_lineage=global_lineage, uk_lineage=uk_lineage, phylotype=phylotype)	
                 # else:	
@@ -413,13 +416,13 @@ def parse_all_metadata(treedir, collapsed_node_file, filtered_background_metadat
     present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict, protected_sequences = parse_tree_tips(treedir, collapsed_node_file)
     
     #parse the metadata with just those queries found in cog
-    query_dict, query_id_dict, tree_to_tip = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column) 
+    query_dict, query_id_dict, tree_to_tip, closest_sequences = parse_filtered_metadata(filtered_background_metadata, tip_to_tree, label_fields, tree_fields, table_fields, database_sample_date_column) 
 
     #Any query information they have provided
     query_dict, full_query_count = parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample_date_column, tree_fields, label_fields, table_fields, context_table_summary_field, date_fields=date_fields, UK_adm2_dict=UK_adm2_adm1_dict, patient_id_col=patient_id_col, reinfection=reinfection)
     
     #parse the full background metadata
-    full_tax_dict, adm2_present_in_background, old_data = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, context_table_summary_field, date_fields=date_fields, virus=virus)
+    full_tax_dict, adm2_present_in_background, old_data = parse_background_metadata(query_dict, label_fields, tree_fields, table_fields, background_metadata_file, present_in_tree, closest_sequences, node_summary_option, tip_to_tree, database_column, database_sample_date_column, protected_sequences, context_table_summary_field, date_fields=date_fields, virus=virus)
 
     return full_tax_dict, query_dict, tree_to_tip, tree_to_all_tip, inserted_node_dict, adm2_present_in_background, full_query_count, old_data 
 
@@ -434,6 +437,7 @@ def investigate_QC_fails(QC_file, input_column):
             name = sequence[input_column]
             reason = sequence["reason_for_failure"]
             final_reason = reason
+            write_reason = True
             if "seq_len" in reason:
                 length = reason.split(":")[1]
                 final_reason = "Sequence too short: only " + length + " bases."
@@ -442,10 +446,24 @@ def investigate_QC_fails(QC_file, input_column):
                 final_reason = "Sequence has too many Ns: " + str(float(round(float(n_content)*100))) + "\% of bases"
             elif "not_in_query_csv" in reason:
                 final_reason = "Sequence not given in -i/--input"
-            fail_dict[name] = final_reason
+            elif "already_in_tree" in reason:
+                write_reason=False
+            
+            if write_reason:
+                fail_dict[name] = final_reason
 
 
     return fail_dict
+
+def investigate_missing_sequences(missing_seq_file):
+
+    missing_list = []
+
+    with open(missing_seq_file) as f:
+        for l in f:
+            missing_list.append(l.strip("\n"))
+    
+    return missing_list
 
 
 def find_new_introductions(query_dict, min_date): #will only be called for the COG sitrep, and the query dict will already be filtered to the most recent sequences
