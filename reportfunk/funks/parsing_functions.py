@@ -348,6 +348,11 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
                     if sequence[context_table_summary_field] != "":
                         new_taxon.attribute_dict["context_table_summary_field"] = sequence[context_table_summary_field]
 
+                for field in table_fields:
+                    if field in col_names:
+                        if sequence[field] != "NA" and sequence[field] != "":
+                            new_taxon.table_dict[field] = sequence[field]
+
                 full_tax_dict[seq_name] = new_taxon
 
             
