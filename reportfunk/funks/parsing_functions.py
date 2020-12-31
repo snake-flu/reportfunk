@@ -397,7 +397,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
                 for field in label_fields:
                     if field in col_names:
-                        if new_taxon.attribute_dict[field] == "NA" and sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
+                        if tax_object.attribute_dict[field] == "NA" and sequence[field] != "NA" and sequence[field] != "": #this means it's not in the input file
                                 tax_object.attribute_dict[field] = sequence[field]
 
                 for field in table_fields:
