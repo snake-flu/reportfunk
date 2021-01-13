@@ -113,8 +113,7 @@ def parse_filtered_metadata(metadata_file, tip_to_tree, label_fields, tree_field
         headers = reader.fieldnames   
 
     with open(metadata_file, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        in_data = [r for r in reader]
+        in_data = csv.DictReader(f)
         for sequence in in_data:
             
             country = sequence["country"]
@@ -188,8 +187,8 @@ def parse_input_csv(input_csv, query_id_dict, input_column, display_name, sample
         col_names = list(col_name_prep.keys())
     
     with open(input_csv, 'r') as f:
-        reader = csv.DictReader(f)
-        in_data = [r for r in reader]
+        in_data = csv.DictReader(f)
+        #in_data = [r for r in reader]
         for sequence in in_data:
             full_query_count += 1
             name = sequence[input_column]
@@ -274,8 +273,7 @@ def parse_background_metadata(query_dict, label_fields, tree_fields, table_field
 
     old_data = False
     with open(background_metadata, 'r') as f:
-        reader = csv.DictReader(f)
-        in_data = [r for r in reader]
+        in_data = csv.DictReader(f)
         for sequence in in_data:
             
             seq_name = sequence[database_name_column]
@@ -436,8 +434,7 @@ def investigate_QC_fails(QC_file, input_column):
     fail_dict = {}
 
     with open(QC_file) as f:
-        reader = csv.DictReader(f)
-        in_data = [r for r in reader]
+        in_data = csv.DictReader(f)
         for sequence in in_data:
             name = sequence[input_column]
             reason = sequence["reason_for_failure"]
