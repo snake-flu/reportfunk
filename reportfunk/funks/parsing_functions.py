@@ -50,10 +50,14 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
     inserted_node_dict = defaultdict(dict) #for node summaries
     protected_sequences = []
 
-    for fn in os.listdir(tree_dir):
-        all_tips = [] #for summarising trees when they are too big - contains subtrees
+   for fn in os.listdir(tree_dir):
+        tree_name = fn.split(".")[0]
+        if tree_name not in tree_to_all_tip: #for summarising trees when they are too big - contains subtrees
+            all_tips = []
+        else:
+            all_tips = tree_to_all_tip[tree_name]
+        
         if fn.endswith("tree"):
-            tree_name = fn.split(".")[0]
             tree = bt.loadNewick(tree_dir + "/" + fn, absoluteTime=False)
             for k in tree.Objects: 
                 if k.branchType == 'leaf' and "inserted" not in k.name and "subtree" not in k.name:
@@ -66,12 +70,11 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
                         in_collapsed = collapsed_node_dict[k.name]
                         present_in_tree.extend(in_collapsed)
                         all_tips.extend(in_collapsed)
-                
+
                 if k.branchType == 'leaf' and "subtree" in k.name:
                     all_tips.append(k.name)
 
         elif fn.endswith(".txt") and fn != "collapse_report.txt":
-            tree_name = fn.split(".")[0]
             node_dict = defaultdict(list)
             with open(tree_dir + "/" + fn) as f:
                 next(f)
@@ -92,10 +95,10 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
                             list_of_tips.extend(in_collapsed)
 
                     node_dict[node_name] = list_of_tips
-            
+
             inserted_node_dict[tree_name] = node_dict
-            
-            tree_to_all_tip[tree_name] = all_tips
+
+        tree_to_all_tip[tree_name] = all_tips
 
     return present_in_tree, tip_to_tree, tree_to_all_tip, inserted_node_dict, protected_sequences
 
