@@ -50,7 +50,7 @@ def parse_tree_tips(tree_dir, collapsed_node_file):
     inserted_node_dict = defaultdict(dict) #for node summaries
     protected_sequences = []
 
-   for fn in os.listdir(tree_dir):
+    for fn in os.listdir(tree_dir):
         tree_name = fn.split(".")[0]
         if tree_name not in tree_to_all_tip: #for summarising trees when they are too big - contains subtrees
             all_tips = []
