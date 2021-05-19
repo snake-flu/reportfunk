@@ -134,6 +134,7 @@ def find_colour_dict(query_dict, trait, colour_scheme):
                 "England":"indianred",
                 "Scotland":"steelblue",
                 "Northern_Ireland":"skyblue",
+                "Northern Ireland":"skyblue",
                 "NA": "dimgrey"}
 
         if "Other" in attribute_options:
